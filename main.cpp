@@ -1,18 +1,11 @@
-#include <QtNetwork>
-#include<windows.h>
+#include "mainwindow.h"
+#include <QApplication>
 
 int main(int argc, char *argv[])
 {
-    QUdpSocket *sender;
-    sender=new QUdpSocket();
-    QByteArray data;
-    data.resize(41);
-    data.fill(0);
-    data[0]=0xff;
-    while (1) {
-       printf("send udp...");
-       sender->writeDatagram(data.data(),data.size(),QHostAddress::Broadcast,1032);
-       Sleep(30000);
-    }
-    return 0;
+    QApplication a(argc, argv);
+    MainWindow w;
+    w.show();
+
+    return a.exec();
 }

@@ -1,0 +1,161 @@
+SUBSTATION,DPR360,1999
+152TT,8A,144D
+1,01.UA,,,V,0.01767767,0.000,0.000,-32767,32767,1.000,1.000,S
+2,02.UB,,,V,0.01767767,0.000,0.000,-32767,32767,1.000,1.000,S
+3,03.UC,,,V,0.01767767,0.000,0.000,-32767,32767,1.000,1.000,S
+4,04.3U0,,,V,0.01767767,0.000,0.000,-32767,32767,1.000,1.000,S
+5,05.IAP,,,A,0.01767767,0.000,0.000,-32767,32767,1.000,1.000,S
+6,06.ICP,,,A,0.01767767,0.000,0.000,-32767,32767,1.000,1.000,S
+7,07.I0,,,mA,0.01767767,0.000,0.000,-32767,32767,1.000,1.000,S
+8,08.PS impedance,,,k¦¸,0.01767767,0.000,0.000,-32767,32767,1.000,1.000,S
+1,Current inst protect Startup,,,0
+2,Overcurrent protect Startup,,,0
+3,Inverse protect Startup,,,0
+4,Overvoltage protect Startup,,,0
+5,Undervoltage protect Startup,,,0
+6,ZS ground protect Startup,,,0
+7,Unbalace protect Startup,,,0
+8,Direction DIFF. protect Startup,,,0
+9,DIFF. protect A Startup,,,0
+10,DIFF. protect C Startup,,,0
+11,DIFF. protect AC Startup,,,0
+12,ZS U protect Startup ,,,0
+13,Arc 1 protect startup,,,0
+14,Arc 2 protect startup,,,0
+15,Standby,,,0
+16,Standby,,,0
+17,Standby,,,0
+18,Standby,,,0
+19,Standby,,,0
+20,Standby,,,0
+21,Standby,,,0
+22,Standby,,,0
+23,Standby,,,0
+24,Standby,,,0
+25,Standby,,,0
+26,Standby,,,0
+27,Standby,,,0
+28,Standby,,,0
+29,Standby,,,0
+30,Standby,,,0
+31,Standby,,,0
+32,Standby,,,0
+33,Current inst protect Act,,,0
+34,Overcurrent protect Act,,,0
+35,Inverse protect Act,,,0
+36,Overcurrent protect Act,,,0
+37,Undervoltage protect Act,,,0
+38,,ZS ground protect Act,,,0
+39,Unbalace protect Act,,,0
+40,Direction DIFF. protect Act,,,0
+41,DIFF. protect A Act,,,0
+42,DIFF. protect C Act,,,0
+43,DIFF. protect AC Act,,,0
+44,ZS U protect Act,,,0
+45,Arc 1 protect Act,,,0
+46,Arc 1 protect Act,,,0
+47,Standby,,,0
+48,Standby,,,0
+49,Standby,,,0
+50,Standby,,,0
+51,Standby,,,0
+52,Standby,,,0
+53,Standby,,,0
+54,Standby,,,0
+55,Standby,,,0
+56,Standby,,,0
+57,Standby,,,0
+58,Standby,,,0
+59,Standby,,,0
+60,Standby,,,0
+61,Standby,,,0
+62,Standby,,,0
+63,Standby,,,0
+64,Standby,,,0
+65,Current sudden-change Startup,,,0
+66,Current Constant Startup,,,0
+67,ZS Current sudden-change Startup,,,0
+68,ZS Current Constant Startup,,,0
+69,TV L-break Startup ,,,0
+70,TV L-break recovery Startup,,,0
+71,Logic Blocking Startup,,,0
+72,Motor Startup,,,0
+73,Standby,,,0
+74,Standby,,,0
+75,Standby,,,0
+76,Standby,,,0
+77,Standby,,,0
+78,Standby,,,0
+79,Standby,,,0
+80,Standby,,,0
+81,A direction DIFF. Startup,,,0
+82,B direction DIFF. Startup,,,0
+83,C direction DIFF. Startup,,,0
+84,ZS direction DIFF. Startup,,,0
+85,Diff. sudden-change Startup,,,0
+86,Diff. Weak-power voltage Startup,,,0
+87,Diff. TWJ Startup,,,0
+88,Proportion Diff. Startup,,,0
+89,High proportion Diff. Startup,,,0
+90,Contralateral data effectively,,,0
+91,Contralateral Current Diff. Act,,,0
+92,Arc Current sudden-change Startup,,,0
+93,Arc Current Constant Startup,,,0
+94,Arc sensor Startup,,,0
+95,Standby,,,0
+96,Standby,,,0
+97,IA Diff. Startup,,,0
+98,IB Diff. Startup,,,0
+99,IC Diff. Startup,,,0
+100,I0  Diff. Startup,,,0
+101,Diff.A ct transient saturation,,,0
+102,Diff.B ct transient saturation,,,0
+103,Diff.C ct transient saturation,,,0
+104,Diff.A ct stable saturation,,,0
+105,Diff.B ct stable saturation,,,0
+106,Diff.C ct stable saturation,,,0
+107,TA disconnection Startup,,,0
+108,Local side phase-splitting current Diff. act,,,0
+109,Opposite side HWJ act,,,0
+110,Standby,,,0
+111,Standby,,,0
+112,Standby,,,0
+113,Local/Remote,,,0
+114,Run/Repair,,,0
+115,Switch position,,,0
+116,Remote control position input,,,0
+117,Gas input,,,0
+118,Wind electron input,,,0
+119,Over-current experimental input,,,0
+120,Signal reset input,,,0
+121,Breaker position,,,0
+122,Handcart working position,,,0
+123,Handcart tst position,,,0
+124,Standby DI1,,,0
+125,Standby DI2,,,0
+126,Standby DI3,,,0
+127,Local regional state,,,0
+128,Adjacent regional state,,,0
+129,Equation of light communication state,,,0
+130,Arc 1 state,,,0
+131,Arc 2 state,,,0
+132,ÊÂ¹Ê×ÜÐÅºÅ,,,0
+133,Standby,,,0
+134,Standby,,,0
+135,Standby,,,0
+136,Standby,,,0
+137,Standby,,,0
+138,Standby,,,0
+139,Standby,,,0
+140,Standby,,,0
+141,Standby,,,0
+142,Standby,,,0
+143,Standby,,,0
+144,Standby,,,0
+50
+1
+2000,455
+30/01/2018,16:33:37.858000
+30/01/2018,16:33:37.898000
+BINARY
+1.0
