@@ -6,9 +6,6 @@
 #include <QUdpSocket>
 #include <QDateTime>
 
-typedef uchar BYTE;
-typedef ushort WORD;
-
 SendUdpBrocastThread::SendUdpBrocastThread()
 {
 }

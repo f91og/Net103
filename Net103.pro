@@ -30,6 +30,7 @@ SOURCES += main.cpp\
 
 HEADERS  += mainwindow.h \
     mainstation.h \
-    asdu.h
+    asdu.h \
+    103struct.h
 
 FORMS    += mainwindow.ui

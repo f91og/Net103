@@ -5,6 +5,7 @@
 #include <QtCore/QThread>
 #include <QTcpServer>
 #include <QTcpSocket>
+#include "103struct.h"
 
 class QTimer ;
 class SendUdpBrocastThread : public QThread
