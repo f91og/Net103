@@ -3,6 +3,7 @@
 
 #include "103struct.h"
 #include <QByteArray>
+#include <qstringlist.h>
 
 class CAsdu
 {
@@ -11,60 +12,60 @@ public:
     virtual ~CAsdu();
 
     virtual void BuildArray(QByteArray& Data);
-    void SaveAsdu(QByteArray& Data); //把引用作为参数
+    void SaveAsdu(QByteArray& Data);
 
-    BYTE m_TYP;   //类型标识
-    BYTE m_VSQ;   //可变结构限定词
-    BYTE m_COT;   //传送原因
-    BYTE m_Addr;  //应用服务单元公共地址
-    BYTE m_FUN;   //功能类型
-    BYTE m_INF;   //信息序号
+    BYTE m_TYP;
+    BYTE m_VSQ;
+    BYTE m_COT;
+    BYTE m_Addr;
+    BYTE m_FUN;
+    BYTE m_INF;
 
-    QByteArray ASDUData; //原始数据
+    QByteArray m_ASDUData;
 };
 
 class CAsdu07 : public CAsdu
 {
 public:
     CAsdu07();
-    CAsdu07(CAsdu& a);  //把引用作为参数
+    CAsdu07(CAsdu& a);
     virtual void BuildArray(QByteArray& Data);
 
-    BYTE m_SCN;   //扫描序号
+    BYTE m_SCN;
 };
 
-class CAsdu10 : public CAsdu
-{
-public:
-    CAsdu10();
-    CAsdu10(CAsdu& a);
-    ~CAsdu10();
-    void Init();
-    virtual BuildArray(QByteArray& Data);
+//class CAsdu10 : public CAsdu
+//{
+//public:
+//    CAsdu10();
+//    CAsdu10(CAsdu& a);
+//    ~CAsdu10();
+//    void Init();
+//    virtual BuildArray(QByteArray& Data);
 
-    BYTE m_RII;  //返回信息表示符
-    NGD m_NGD;
+//    BYTE m_RII;
+//    NGD m_NGD;
+//    QPtrList<DataSet> m_DataSets;
+//};
 
-};
+//class CAsdu20 ： public CAsdu
+//{
 
-class CAsdu20 ： public CAsdu
-{
+//};
 
-};
+//class CAsdu21 : public CAsdu
+//{
 
-class CAsdu21 : public CAsdu
-{
+//};
 
-};
+//class CAsdu201 : public CAsdu
+//{
 
-class CAsdu201 : public CAsdu
-{
+//};
 
-};
+//class CAsdu200 : public CAsdu
+//{
 
-class CAsdu200 : public CAsdu
-{
-
-};
+//};
 
 #endif // ASDU_H

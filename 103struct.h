@@ -1,5 +1,5 @@
-#ifndef 103STRUCT_H
-#define 103STRUCT_H
+#ifndef STRUCT103_H
+#define STRUCT103_H
 
 #include <QByteArray>
 
@@ -12,8 +12,7 @@ typedef union tag103NGD
     struct tagngd{
         BYTE No	:6;//UI[1~6]<1~63>：数目
         BYTE Count	:1;//BS1[7]<0~1>：具有相同的通用分类标识序号（RII）的应用服务数据单元的一位计数器位，计数器位初始值为0
-        BYTE Cont	:1;/*BS1[8]<0~1>：0：后面未跟随具有相同的返回标志符（RII）的应用服务数据单元。
-                     1：后面跟随具有相同的返回标志符（RII）的应用服务数据单元。*/
+        BYTE Cont	:1;//BS1[8]<0~1>：0：后面未跟随具有相同的返回标志符（RII）的应用服务数据单元。
     };
     tagngd ngd;
     BYTE byte;
@@ -35,7 +34,7 @@ typedef struct tagGIN
 {
     BYTE GROUP;//组号
     BYTE ENTRY;//条目
-}GIN;//通用分类标识序号-7.2.6.31
+}GIN;//通用分类标识序号-7.2.6.3
 
 typedef struct tagDataSet
 {
@@ -47,4 +46,4 @@ typedef struct tagDataSet
 
 #pragma pack()
 
-#endif // 103STRUCT_H
+#endif

@@ -26,7 +26,8 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += main.cpp\
         mainwindow.cpp \
-    mainstation.cpp
+    mainstation.cpp \
+    asdu.cpp
 
 HEADERS  += mainwindow.h \
     mainstation.h \
