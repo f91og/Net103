@@ -14,14 +14,16 @@ public:
     virtual void BuildArray(QByteArray& Data);
     void SaveAsdu(QByteArray& Data);
 
-    BYTE m_TYP;
-    BYTE m_VSQ;
-    BYTE m_COT;
-    BYTE m_Addr;
-    BYTE m_FUN;
-    BYTE m_INF;
+    BYTE m_TYP; //ASDU 类型标识
+    BYTE m_VSQ; //ASDU 可变结构限定词
+    BYTE m_COT; //ASDU 传送原因
+    BYTE m_Addr; //ASDU 应用服务单元公共地址
+    BYTE m_FUN; //ASDU 功能类型
+    BYTE m_INF; //ASDU 信息序号
 
-    QByteArray m_ASDUData;
+    QByteArray m_ASDUData; //ASDU中的数据
+
+    int m_iResult; //标识是否是合法ASDU?
 };
 
 class CAsdu07 : public CAsdu

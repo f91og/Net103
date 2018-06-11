@@ -76,29 +76,31 @@ void MainWindow::on_start_button_clicked()
 
 void MainWindow::ExplainASDU(QByteArray &Data)
 {
-//    CAsdu a;
-//    do
-//    {
-//        a.m_ASDUData.resize(0);
-//        a.SaveAsdu(Data);
-//        switch (a.m_TYP) {
-//        case 0x0a:
-//            ProcessAsdu10(a);
-//            break;
+    CAsdu a;
+    do
+    {
+        a.m_ASDUData.resize(0);
+        a.SaveAsdu(Data); //这步结束后只组装了一般的Asdu，并不知道具体类型，但是asdu中携带的数据已经封装到m_AsduData中了
+        if(a.m_iResult==0) return;
+        switch (a.m_TYP) {
+        case 0x0a:
+            ProcessAsdu10(a);
+            break;
 //        case 201:
 //            // process asdu201
 //            break;
 //        case 200:
 //            // process asdu200
 //            break;
-//        default:
-//            break;
-//        }
-//    }while(a.m_ASDUData.size()>0);
+        default:
+            break;
+        }
+    }while(a.m_ASDUData.size()>0);
 }
 
 void MainWindow::ProcessAsdu10(CAsdu &a)
 {
-    CAsdu10 a10(a);
-    a10.ExplainAsdu();
+    CAsdu10 a10(a); //将原来a中的数据赋给a10
+    a10.ExplainAsdu(); //正式开始解析这个asdu10包
+
 }

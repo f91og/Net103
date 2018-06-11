@@ -1,4 +1,5 @@
 #include "asdu.h"
+#include <QDebug>
 
 CAsdu::CAsdu()
 {
@@ -9,6 +10,8 @@ CAsdu::CAsdu()
     m_Addr=0;
     m_FUN=0;
     m_INF=0;
+
+    m_iResult=0;
 }
 
 CAsdu::~CAsdu()
@@ -19,12 +22,25 @@ CAsdu::~CAsdu()
 
 void CAsdu::SaveAsdu(QByteArray &Data)//将转来的Data解析，放入未知类型的Asdu中
 {
+    if(Data.size()<6)  //如果是损坏的包则不解析传来的
+    {
+        m_iResult=0;
+        Data.resize(0);
+        return;
+    }
+
     m_TYP=Data[0];
     m_VSQ=Data[1];
     m_COT=Data[2];
     m_Addr=Data[3];
     m_FUN=Data[4];
     m_INF=Data[5];
+    // 将Data中封装的数据赋给Asdu中的m_ASDUData
+    m_ASDUData=Data.mid(6);
+    qDebug()<<"从Asdu解析出的封装数据是：";
+    qDebug()<<m_ASDUData;
+    Data.resize(0);
+    m_iResult=1;
 }
 
 /////////// ASDU07 /////////
@@ -77,24 +93,33 @@ CAsdu10::~CAsdu10()
     m_DataSets.clear();
 }
 
-void CAsdu10::ExplainAsdu(int iProcessType)
+void CAsdu10::ExplainAsdu(int iProcessType) //解析收到的asdu10，将收到的数据封装
 {
     if(iProcessType==0)
     {
         m_RII=m_ASDUData[0];
         m_NGD.byte=m_ASDUData[1];
+        m_ASDUData=m_ASDUData.mid(2);
 
+        int i=0;
         DataSet* pDataSet=NULL;
         for(int i=0;i<m_NGD.byte;i++)
         {
             if(m_ASDUData.size()>(int)(6*sizeof(BYTE)))
             {
                 pDataSet=new DataSet;
-                pDataSet->gin.GROUP=m_ASDUData[0];
-                pDataSet->gin.ENTRY=m_ASDUData[1];
-                pDataSet->kod=m_ASDUData[2];
+                pDataSet->gin.GROUP=m_ASDUData[0];//填入每一组中组号
+                pDataSet->gin.ENTRY=m_ASDUData[1];//填入每一组中的条目号
+                pDataSet->kod=m_ASDUData[2];//填入每一组的描述类别kod
+                //填入每一组中的通用分类数据秒数gdd
                 memcpy(pDataSet->gdd.byte, m_ASDUData.data()+3*sizeof(BYTE), sizeof(pDataSet->gdd.byte));
-
+                //填入通入分类表示数据gid，首先得知道其长度，长度是gdd中的数据宽度乘以gdd中的数目
+                pDataSet->gid.resize(pDataSet->gdd.gdd.DataSize*pDataSet->gdd.gdd.Number*sizeof(BYTE));
+                //知道gid的长度后便可以填入相应的gid数据
+                memcpy(pDataSet->gid.data(), m_ASDUData.data()+3*sizeof(BYTE)+sizeof(pDataSet->gdd.byte), pDataSet->gid.size()*sizeof(BYTE));
+                m_DataSets.append(pDataSet);
+                int len=3*sizeof(BYTE)+sizeof(pDataSet->gdd.byte)+pDataSet->gdd.gdd.DataSize*pDataSet->gdd.gdd.Number*sizeof(BYTE);
+                m_ASDUData=m_ASDUData.mid(len);
             }
         }
     }
