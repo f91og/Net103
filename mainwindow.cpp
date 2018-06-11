@@ -76,25 +76,25 @@ void MainWindow::on_start_button_clicked()
 
 void MainWindow::ExplainASDU(QByteArray &Data)
 {
-    CAsdu a;
-    do
-    {
-        a.m_ASDUData.resize(0);
-        a.SaveAsdu(Data);
-        switch (a.m_TYP) {
-        case 0x0a:
-            ProcessAsdu10(a);
-            break;
-        case 201:
-            // process asdu201
-            break;
-        case 200:
-            // process asdu200
-            break;
-        default:
-            break;
-        }
-    }while(a.m_ASDUData.size()>0);
+//    CAsdu a;
+//    do
+//    {
+//        a.m_ASDUData.resize(0);
+//        a.SaveAsdu(Data);
+//        switch (a.m_TYP) {
+//        case 0x0a:
+//            ProcessAsdu10(a);
+//            break;
+//        case 201:
+//            // process asdu201
+//            break;
+//        case 200:
+//            // process asdu200
+//            break;
+//        default:
+//            break;
+//        }
+//    }while(a.m_ASDUData.size()>0);
 }
 
 void MainWindow::ProcessAsdu10(CAsdu &a)

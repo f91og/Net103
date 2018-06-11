@@ -43,7 +43,7 @@ public:
     void Init();
     virtual void BuildArray(QByteArray& Data);
     virtual void ExplainAsdu();
-    virtual void ExplainGID(CByteArray& Gid);
+    virtual void ExplainGID(QByteArray& Gid);
 
     BYTE m_RII;
     NGD m_NGD;

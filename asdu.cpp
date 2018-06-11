@@ -77,3 +77,26 @@ CAsdu10::~CAsdu10()
     m_DataSets.clear();
 }
 
+void CAsdu10::ExplainAsdu(int iProcessType)
+{
+    if(iProcessType==0)
+    {
+        m_RII=m_ASDUData[0];
+        m_NGD.byte=m_ASDUData[1];
+
+        DataSet* pDataSet=NULL;
+        for(int i=0;i<m_NGD.byte;i++)
+        {
+            if(m_ASDUData.size()>(int)(6*sizeof(BYTE)))
+            {
+                pDataSet=new DataSet;
+                pDataSet->gin.GROUP=m_ASDUData[0];
+                pDataSet->gin.ENTRY=m_ASDUData[1];
+                pDataSet->kod=m_ASDUData[2];
+                memcpy(pDataSet->gdd.byte, m_ASDUData.data()+3*sizeof(BYTE), sizeof(pDataSet->gdd.byte));
+
+            }
+        }
+    }
+}
+

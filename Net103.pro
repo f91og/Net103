@@ -35,3 +35,5 @@ HEADERS  += mainwindow.h \
     103struct.h
 
 FORMS    += mainwindow.ui
+
+LIBS += -lpthread
