@@ -34,19 +34,21 @@ public:
     BYTE m_SCN;
 };
 
-//class CAsdu10 : public CAsdu
-//{
-//public:
-//    CAsdu10();
-//    CAsdu10(CAsdu& a);
-//    ~CAsdu10();
-//    void Init();
-//    virtual BuildArray(QByteArray& Data);
+class CAsdu10 : public CAsdu
+{
+public:
+    CAsdu10();//主站发子站的话就用这个
+    CAsdu10(CAsdu& a);//主站收子站的话就用这个
+    ~CAsdu10();
+    void Init();
+    virtual void BuildArray(QByteArray& Data);
+    virtual void ExplainAsdu();
+    virtual void ExplainGID(CByteArray& Gid);
 
-//    BYTE m_RII;
-//    NGD m_NGD;
-//    QPtrList<DataSet> m_DataSets;
-//};
+    BYTE m_RII;
+    NGD m_NGD;
+    QPtrList<DataSet> m_DataSets;
+};
 
 //class CAsdu20 ： public CAsdu
 //{

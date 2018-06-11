@@ -2,6 +2,8 @@
 #include "ui_mainwindow.h"
 #include "mainstation.h"
 #include <time.h>
+#include <pthread.h>
+#include "asdu.h"
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -25,6 +27,7 @@ void MainWindow::server_New_Connect()
     ui->textEdit_Recv->setText("客户端已连接......");
     QObject::connect(socket, &QTcpSocket::readyRead, this, &MainWindow::socket_Read_Data);
     QObject::connect(socket, &QTcpSocket::disconnected, this, &MainWindow::socket_Disconnected);
+
 //    uchar data[14];
 //    memset(data, 0x00, sizeof(data));
 //    data[0]=201;
@@ -53,25 +56,49 @@ void MainWindow::socket_Read_Data()
     QByteArray buffer;
     //读取缓冲区数据
     buffer = socket->readAll();
-    if(buffer[0]==0x0a){
-
-    }else if(buffer[0]==0x05){
-
-    }else if(buffer[1]==201){
-
-    }
+    ExplainASDU(buffer);
 }
 
 void MainWindow::socket_Disconnected()
 {
-    qDebug() << "Disconnected!";
+    qDebug() << "Disconnected......";
 }
 
 void MainWindow::on_start_button_clicked()
 {
     ui->textEdit_Recv->setText("开始连接子站......");
-    SendUdpBrocastThread *sendUdpBrocastThread=new SendUdpBrocastThread();
-    sendUdpBrocastThread->start();
-    qDebug()<<"New thread started...";
+//    SendUdpBrocastThread *sendUdpBrocastThread=new SendUdpBrocastThread();
+//    sendUdpBrocastThread->start();
+    pthread_t threadidtmp=0;
+    pthread_create(&threadidtmp, NULL, UDPThread, NULL);
     server->listen(QHostAddress::Any, 1048);
+}
+
+void MainWindow::ExplainASDU(QByteArray &Data)
+{
+    CAsdu a;
+    do
+    {
+        a.m_ASDUData.resize(0);
+        a.SaveAsdu(Data);
+        switch (a.m_TYP) {
+        case 0x0a:
+            ProcessAsdu10(a);
+            break;
+        case 201:
+            // process asdu201
+            break;
+        case 200:
+            // process asdu200
+            break;
+        default:
+            break;
+        }
+    }while(a.m_ASDUData.size()>0);
+}
+
+void MainWindow::ProcessAsdu10(CAsdu &a)
+{
+    CAsdu10 a10(a);
+    a10.ExplainAsdu();
 }

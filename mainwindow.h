@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include <QTcpServer>
 #include <QTcpSocket>
+#include "asdu.h"
 
 namespace Ui {
 class MainWindow;
@@ -16,6 +17,12 @@ class MainWindow : public QMainWindow
 public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
+
+private:
+    void ExplainASDU(QByteArray& Data);
+    void ProcessAsdu10(CAsdu& a);
+
+    void SendAsdu07();
 
 private slots:
 

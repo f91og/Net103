@@ -51,16 +51,29 @@ void CAsdu07::BuildArray(QByteArray &Data)  //组装asdu到Data中
 }
 
 /////////// ASDU10 /////////
-//CAsdu10::CAsdu10()
-//{
-//    m_TYP=0x0a;
-//    m_VSQ=0x81;
-//    m_COT=0x28;//通用分类写命令
-//    m_FUN=0xfe;
-//}
+CAsdu10::CAsdu10()
+{
+    m_TYP=0x0a;
+    m_VSQ=0x81;
+    m_COT=0x28;//通用分类写命令
+    m_FUN=0xfe;
+}
 
-//CAsdu10::~CAsdu10()
-//{
-//    m_DataSets.clear();
-//}
+CAsdu10::CAsdu10(CAsdu &a)
+{
+    m_TYP=a.m_TYP;
+    m_VSQ=a.m_VSQ;
+    m_COT=a.m_COT;
+    m_Addr=a.m_Addr;
+    m_FUN=a.m_FUN;
+    m_INF=a.m_INF;
+
+    m_ASDUData.append(a.m_ASDUData);
+    a.m_ASDUData.resize(0);
+}
+
+CAsdu10::~CAsdu10()
+{
+    m_DataSets.clear();
+}
 
