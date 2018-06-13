@@ -1,7 +1,6 @@
 #include "asdu.h"
 #include <QDebug>
 #include <QFile>
-#include <Qdir>
 
 CAsdu::CAsdu()
 {
@@ -54,7 +53,7 @@ CAsdu07::CAsdu07()
     m_SCN=0xff;
 }
 
-void CAsdu07::BuildArray(QByteArray &Data)  //组装asdu到Data中
+void CAsdu07::BuildArray(QByteArray &Data)  //组装asdu到Data中，要不然socket不能发送我们自己封装的asdu
 {
     Data.resize(7);
     Data[0]=m_TYP;
@@ -121,42 +120,91 @@ void CAsdu10::ExplainAsdu(int iProcessType) //解析收到的asdu10，将收到�
                 int len=3*sizeof(BYTE)+sizeof(pDataSet->gdd.byte)+pDataSet->gdd.gdd.DataSize*pDataSet->gdd.gdd.Number*sizeof(BYTE);
                 m_ASDUData=m_ASDUData.mid(len);
             }
+            else
+            {
+                m_iResult=0;
+                break;
+            }
         }
     }
-    QString addr=QString(m_Addr);
-    int i_addr=m_Addr;  // 这里uchar转int直接赋值就可以了
-    qDebug()<<i_addr;
-    QFile file("E:\\Net103\\192.168.0.171-01.txt");
-    file.open(QIODevice::WriteOnly | QIODevice::Text);
-    QTextStream in(&file);
-    in.setCodec("UTF-8");
-    QString str="组号  条目  描述类别  数据";
-    in<<str<<"\n";
-    for(int i=0;i!=m_DataSets.size();i++)
-    {
-        DataSet data=m_DataSets.at(i);
-        QString group;
-        int entry=data.gin.ENTRY;
-        int kod=data.kod;
-        QByteArray gid=data.gid;
-        switch (data.gin.GROUP) {
-        case 0x03:case 0x02:
-            group="定值";
-            break;
-        case 0x05:
-            group="告警";
-            break;
-        case 0x08:case 0x09:
-            group="遥信";
-            break;
-        case 0x07:
-            group="运动测量";
-            break;
-        default:
-            break;
-        }
-        in<<group<<"   "<<entry<<"     "<<kod<<"   "<<gid<<"\n";
-    }
-    file.close();
+//    QString addr=QString(m_Addr);
+//    int i_addr=m_Addr;  // 这里uchar转int直接赋值就可以了
+//    qDebug()<<i_addr;
+//    QFile file("E:\\Net103\\192.168.0.171-01.txt");
+//    file.open(QIODevice::WriteOnly | QIODevice::Text);
+//    QTextStream in(&file);
+//    in.setCodec("UTF-8");
+//    QString str="组号  条目  描述类别  数据";
+//    in<<str<<"\n";
+//    for(int i=0;i!=m_DataSets.size();i++)
+//    {
+//        DataSet data=m_DataSets.at(i);
+//        QString group;
+//        int entry=data.gin.ENTRY;
+//        int kod=data.kod;
+//        QByteArray gid=data.gid;
+//        switch (data.gin.GROUP) {
+//        case 0x03:case 0x02:
+//            group="定值";
+//            break;
+//        case 0x05:
+//            group="告警";
+//            break;
+//        case 0x08:case 0x09:
+//            group="遥信";
+//            break;
+//        case 0x07:
+//            group="运动测量";
+//            break;
+//        default:
+//            break;
+//        }
+//        in<<group<<"   "<<entry<<"     "<<kod<<"   "<<gid<<"\n";
+//    }
+//    file.close();
 }
 
+
+/////////// ASDU21 /////////
+CAsdu21::CAsdu21()
+{
+    m_TYP=0x15;
+    m_VSQ=0x81;
+    m_COT=0x2a;
+    m_FUN=0xfe;
+    m_INF=0xf1;
+    m_RII=0x00;
+
+    m_DataSets.clear();
+}
+
+CAsdu21::~CAsdu21()
+{
+    m_DataSets.clear();
+}
+
+void CAsdu21::BuildArray(QByteArray &Data)
+{
+    if(m_NOG!=m_DataSets.size())
+    {
+        m_iResult=0;
+        return;
+    }
+    m_iResult=1;
+    Data.resize(0);
+    Data.append(m_TYP);
+    Data.append(m_VSQ);
+    Data.append(m_Addr);
+    Data.append(m_FUN);
+    Data.append(m_INF);
+    Data.append(m_RII);
+    Data.append(m_NOG);
+//    DataSet pDataSet;
+//    for(int i=0;i<m_NOG;i++)
+//    {
+//        pDataSet=m_DataSets.at(i);
+//        Data.append(pDataSet.gin.GROUP);
+//        Data.append(pDataSet.gin.ENTRY);
+//        Data.append(pDataSet.kod);
+//    }
+}

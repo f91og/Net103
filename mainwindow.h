@@ -23,6 +23,9 @@ private:
     void ProcessAsdu10(CAsdu& a);
 
     void SendAsdu07();
+    void SendAsdu21ForYaoCe();
+    void SendAsdu21ForDingZhi();
+    void GetLuBo();
 
 private slots:
 

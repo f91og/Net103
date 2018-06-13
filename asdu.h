@@ -44,7 +44,6 @@ public:
     CAsdu10(CAsdu& a);//主站收子站的话就用这个
     ~CAsdu10();
     void Init();
-//    virtual void BuildArray(QByteArray& Data);
     virtual void ExplainAsdu(int iProcessType = 0);
 //    virtual void ExplainGID(QByteArray& Gid);
 
@@ -58,19 +57,41 @@ public:
 
 //};
 
-//class CAsdu21 : public CAsdu
-//{
+class CAsdu21 : public CAsdu
+{
+public:
+    CAsdu21();
+    ~CAsdu21();
+    virtual void BuildArray(QByteArray& Data);
+public:
+    BYTE m_RII;
+    BYTE m_NOG;
+    QList<DataSet> m_DataSets;
+};
 
-//};
+class CAsdu201 : public CAsdu
+{
+public:
+    CAsdu201();
+    CAsdu201(CAsdu201& a);
+    ~CAsdu201();
+    virtual void BuildArray(QByteArray& Data);
+    virtual void ExplainAsdu();
+public:
+    time_t start_time;
+    time_t end_time;
+};
 
-//class CAsdu201 : public CAsdu
-//{
-
-//};
-
-//class CAsdu200 : public CAsdu
-//{
-
-//};
+class CAsdu200 : public CAsdu
+{
+public :
+    CAsdu200();
+    CAsdu200(CAsdu& a);
+    ~CAsdu200();
+    virtual void BuildArray(QByteArray& Data);
+    virtual void ExplainAsdu();
+public:
+    QByteArray file_name;
+};
 
 #endif // ASDU_H
