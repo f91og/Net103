@@ -4,6 +4,7 @@
 #include "103struct.h"
 #include <QByteArray>
 #include <qstringlist.h>
+#include <QList>
 
 class CAsdu
 {
@@ -11,7 +12,7 @@ public:
     CAsdu();
     virtual ~CAsdu();
 
-    virtual void BuildArray(QByteArray& Data);
+//    virtual void BuildArray(QByteArray& Data);
     void SaveAsdu(QByteArray& Data);
 
     BYTE m_TYP; //ASDU 类型标识
@@ -43,13 +44,13 @@ public:
     CAsdu10(CAsdu& a);//主站收子站的话就用这个
     ~CAsdu10();
     void Init();
-    virtual void BuildArray(QByteArray& Data);
-    virtual void ExplainAsdu();
-    virtual void ExplainGID(QByteArray& Gid);
+//    virtual void BuildArray(QByteArray& Data);
+    virtual void ExplainAsdu(int iProcessType = 0);
+//    virtual void ExplainGID(QByteArray& Gid);
 
     BYTE m_RII;
     NGD m_NGD;
-    QPtrList<DataSet> m_DataSets;
+    QList<DataSet> m_DataSets;
 };
 
 //class CAsdu20 ： public CAsdu

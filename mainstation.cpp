@@ -5,8 +5,10 @@
 #include <QHostAddress>
 #include <QUdpSocket>
 #include <QDateTime>
+#include <pthread.h>
+#include <unistd.h>
 
-void* UDPThread()
+void* UDPThread(void* lp)
 {
     while(true)
     {

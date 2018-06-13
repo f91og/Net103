@@ -70,7 +70,7 @@ void MainWindow::on_start_button_clicked()
 //    SendUdpBrocastThread *sendUdpBrocastThread=new SendUdpBrocastThread();
 //    sendUdpBrocastThread->start();
     pthread_t threadidtmp=0;
-    pthread_create(&threadidtmp, NULL, UDPThread, NULL);
+    pthread_create(&threadidtmp,NULL,UDPThread,NULL);
     server->listen(QHostAddress::Any, 1048);
 }
 

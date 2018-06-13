@@ -117,7 +117,7 @@ void CAsdu10::ExplainAsdu(int iProcessType) //解析收到的asdu10，将收到�
                 pDataSet->gid.resize(pDataSet->gdd.gdd.DataSize*pDataSet->gdd.gdd.Number*sizeof(BYTE));
                 //知道gid的长度后便可以填入相应的gid数据
                 memcpy(pDataSet->gid.data(), m_ASDUData.data()+3*sizeof(BYTE)+sizeof(pDataSet->gdd.byte), pDataSet->gid.size()*sizeof(BYTE));
-                m_DataSets.append(pDataSet);
+                m_DataSets.append(*pDataSet);
                 int len=3*sizeof(BYTE)+sizeof(pDataSet->gdd.byte)+pDataSet->gdd.gdd.DataSize*pDataSet->gdd.gdd.Number*sizeof(BYTE);
                 m_ASDUData=m_ASDUData.mid(len);
             }

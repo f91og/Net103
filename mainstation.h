@@ -7,7 +7,7 @@
 #include <QTcpSocket>
 #include "103struct.h"
 
-void* UDPThread();
+void* UDPThread(void *lp);
 //class QTimer ;
 //class SendUdpBrocastThread : public QThread
 //{
