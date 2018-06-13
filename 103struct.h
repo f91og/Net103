@@ -28,7 +28,8 @@ typedef union tag103GDD
     };
     taggdd gdd;
     BYTE byte[3];
-}GDD;//通用分类数据描述（GDD）：CP24{数据类型（DATATYPE），数据宽度（DATASIZE），数目（NUMBER），后续状态位（CONT）}
+}
+GDD;//通用分类数据描述（GDD）：CP24{数据类型（DATATYPE），数据宽度（DATASIZE），数目（NUMBER），后续状态位（CONT）}
 
 typedef struct tagGIN
 {

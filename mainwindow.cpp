@@ -67,8 +67,6 @@ void MainWindow::socket_Disconnected()
 void MainWindow::on_start_button_clicked()
 {
     ui->textEdit_Recv->setText("开始连接子站......");
-//    SendUdpBrocastThread *sendUdpBrocastThread=new SendUdpBrocastThread();
-//    sendUdpBrocastThread->start();
     pthread_t threadidtmp=0;
     pthread_create(&threadidtmp,NULL,UDPThread,NULL);
     server->listen(QHostAddress::Any, 1048);
@@ -102,5 +100,4 @@ void MainWindow::ProcessAsdu10(CAsdu &a)
 {
     CAsdu10 a10(a); //将原来a中的数据赋给a10
     a10.ExplainAsdu(); //正式开始解析这个asdu10包
-
 }

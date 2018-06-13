@@ -1,5 +1,7 @@
 #include "asdu.h"
 #include <QDebug>
+#include <QFile>
+#include <Qdir>
 
 CAsdu::CAsdu()
 {
@@ -22,7 +24,7 @@ CAsdu::~CAsdu()
 
 void CAsdu::SaveAsdu(QByteArray &Data)//将转来的Data解析，放入未知类型的Asdu中
 {
-    if(Data.size()<6)  //如果是损坏的包则不解析传来的
+    if(Data.size()<6)  //如果是损坏的包则不解析传来的包
     {
         m_iResult=0;
         Data.resize(0);
@@ -37,8 +39,6 @@ void CAsdu::SaveAsdu(QByteArray &Data)//将转来的Data解析，放入未知类
     m_INF=Data[5];
     // 将Data中封装的数据赋给Asdu中的m_ASDUData
     m_ASDUData=Data.mid(6);
-    qDebug()<<"从Asdu解析出的封装数据是：";
-    qDebug()<<m_ASDUData;
     Data.resize(0);
     m_iResult=1;
 }
@@ -123,5 +123,40 @@ void CAsdu10::ExplainAsdu(int iProcessType) //解析收到的asdu10，将收到�
             }
         }
     }
+    QString addr=QString(m_Addr);
+    int i_addr=m_Addr;  // 这里uchar转int直接赋值就可以了
+    qDebug()<<i_addr;
+    QFile file("E:\\Net103\\192.168.0.171-01.txt");
+    file.open(QIODevice::WriteOnly | QIODevice::Text);
+    QTextStream in(&file);
+    in.setCodec("UTF-8");
+    QString str="组号  条目  描述类别  数据";
+    in<<str<<"\n";
+    for(int i=0;i!=m_DataSets.size();i++)
+    {
+        DataSet data=m_DataSets.at(i);
+        QString group;
+        int entry=data.gin.ENTRY;
+        int kod=data.kod;
+        QByteArray gid=data.gid;
+        switch (data.gin.GROUP) {
+        case 0x03:case 0x02:
+            group="定值";
+            break;
+        case 0x05:
+            group="告警";
+            break;
+        case 0x08:case 0x09:
+            group="遥信";
+            break;
+        case 0x07:
+            group="运动测量";
+            break;
+        default:
+            break;
+        }
+        in<<group<<"   "<<entry<<"     "<<kod<<"   "<<gid<<"\n";
+    }
+    file.close();
 }
 

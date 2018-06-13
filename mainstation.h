@@ -8,22 +8,5 @@
 #include "103struct.h"
 
 void* UDPThread(void *lp);
-//class QTimer ;
-//class SendUdpBrocastThread : public QThread
-//{
-//    Q_OBJECT
-
-//public :
-//    SendUdpBrocastThread();
-//    ~SendUdpBrocastThread();
-//protected:
-//    void run();
-//public slots:
-//    void slot_time();
-//signals:
-//    void sendtime(QString str);
-//private:
-//    QTimer *m_pTimer;
-//};
 
 #endif // MAINSTATION_H
