@@ -26,33 +26,11 @@ void MainWindow::server_New_Connect()
 {
     socket = server->nextPendingConnection();
     ui->textEdit_Recv->setText("客户端已连接......");
-    SendAsdu07();//这里直接这么用可以么？
-    SendAsdu21ForYaoCe();
+//    SendAsdu07();
+    SendAsdu21ForYaBan();
     SendAsdu21ForDingZhi();
     QObject::connect(socket, &QTcpSocket::readyRead, this, &MainWindow::socket_Read_Data);
     QObject::connect(socket, &QTcpSocket::disconnected, this, &MainWindow::socket_Disconnected);
-
-//    uchar data[14];
-//    memset(data, 0x00, sizeof(data));
-//    data[0]=201;
-//    data[1]=0x81;
-//    data[2]=0x20;
-//    data[3]=0x01;
-//    data[4]=0xff;
-//    data[5]=0x00;
-
-//    // 获取time_t格式的时间
-//    time_t time_start;
-//    time_t time_current;
-//    int interval=30;
-
-//    time(&time_current);
-//    time_start=time_current-interval*24*60*60;
-
-//    memcpy(&data[6], &time_start, 4);
-//    memcpy(&data[10], &time_current, 4);
-//    socket->write((char*)data,14);
-//    socket->flush();
 }
 
 void MainWindow::socket_Read_Data()
@@ -86,7 +64,32 @@ void MainWindow::ExplainASDU(QByteArray &Data)
         if(a.m_iResult==0) return;
         switch (a.m_TYP) {
         case 0x0a:
-            ProcessAsdu10(a);
+            if(Data[2]==0x02&&Data[8]==0x04)//如果循环上送的是报告，则需特殊处理
+            {
+                QFile file0("E:\\Net103\\192.168.0.171-01-循环上报-动作报告.txt");
+                QString datatype="功能类型和信息序号";
+                file0.open(QIODevice::WriteOnly | QIODevice::Text);
+                QTextStream in(&file0);
+                in.setCodec("UTF-8");
+
+                int len=Data[12];//数据宽度N，指动作参数的个数
+                QByteArray gid;
+                gid.resize(len);
+                for(int i=0;i<len;i++)
+                {
+                    gid[i]=Data[14+i];
+                }
+                in<<"动作报告--"<<"条目号："<<Data[9]<<"--"<<"数据："<<gid<<"\n";
+
+                in<<"动作报告号:"<<;
+                in<<"继电器动作时间：";
+                in<<"录播流水号：";
+                //电流电压参数暂且没读
+                file0.close();
+            }else
+            {
+               ProcessAsdu10(a);
+            }
             break;
         case 201:
             // process asdu201
@@ -117,24 +120,25 @@ void MainWindow::ProcessAsdu10(CAsdu &a)
         {
             DataSet data=a10.m_DataSets.at(i);
             QString group;
-            int entry=data.gin.ENTRY;
-            int kod=data.kod;
-            QByteArray gid=data.gid;
+            int entry;
+            int kod;
+            data.gdd
             switch (data.gin.GROUP) {
-            case 0x03:case 0x02:
-                group="定值";
+            case 0x04:
+                group="报告";
+
                 break;
             case 0x08:case 0x09:
                 group="遥信";
                 break;
             case 0x07:
-                group="运动测量";
+                group="遥测";
                 break;
             default:
                 break;
             }
             //data.gdd.taggdd.DataType; 这里好像是9，双点信息
-            in<<group<<"   "<<entry<<"     "<<kod<<"   "<<gid<<"\n";
+            //in<<group<<"   "<<entry<<"     "<<kod<<"   "<<gid<<"\n";
         }
         file1.close();
     }
@@ -167,7 +171,7 @@ void MainWindow::ProcessAsdu10(CAsdu &a)
             }
         }
         file2.close();
-    }else if(a10.m_COT==0x2a)
+    }else if(a10.m_COT==0x2a)//通用分类度命令的有效数据响应
     {
         QFile file3("E:\\Net103\\192.168.0.171-01-突发上传.txt");
         file3.open(QIODevice::WriteOnly | QIODevice::Text);
@@ -207,20 +211,25 @@ void MainWindow::SendAsdu07()
     socket->flush();
 }
 
-void MainWindow::SendAsdu21ForYaoCe()
+void MainWindow::SendAsdu21ForYaBan()
 {
     QByteArray data;
     data.resize(11);
-    CAsdu21 a21;
-    a21.m_Addr=0x01;//后面要改的这个
-    a21.m_NOG=1;
-    a21.BuildArray(data);
-    BYTE group=0x0e;
-    BYTE entry=0x00;
-    BYTE kod=1;
-    data.append(group);
-    data.append(entry);
-    data.append(kod);
+    data[0]=0x15;
+    data[1]=0x81;
+    data[2]=0x2a;
+    data[3]=0x01;
+    data[4]=0xfe;
+    data[5]=0xf1;
+    data[6]=0x00;
+    data[7]=0x01;
+    data[8]=0x0e;
+    data[9]=0x00;
+    data[10]=0x01;
+//    a21.m_Addr=0x01;//后面要改的这个
+//    a21.m_NOG=1;
+//    a21.BuildArray(data);
+    qDebug()<<data.size();
     socket->write(data);
     socket->flush();
 }
@@ -229,16 +238,21 @@ void MainWindow::SendAsdu21ForDingZhi()
 {
     QByteArray data;
     data.resize(11);
-    CAsdu21 a21;
-    a21.m_Addr=0x01;//后面要改的这个
-    a21.m_NOG=1;
-    a21.BuildArray(data);
-    BYTE group=0x02;
-    BYTE entry=0x00;
-    BYTE kod=1;
-    data.append(group);
-    data.append(entry);
-    data.append(kod);
+    data[0]=0x15;
+    data[1]=0x81;
+    data[2]=0x2a;
+    data[3]=0x01;
+    data[4]=0xfe;
+    data[5]=0xf1;
+    data[6]=0x00;
+    data[7]=0x01;
+    data[8]=0x02;//组号
+    data[9]=0x00;//条目号
+    data[10]=0x01;
+//    a21.m_Addr=0x01;//后面要改的这个
+//    a21.m_NOG=1;
+//    a21.BuildArray(data);
+    qDebug()<<data.size();
     socket->write(data);
     socket->flush();
 }

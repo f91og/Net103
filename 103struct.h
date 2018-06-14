@@ -45,6 +45,35 @@ typedef struct tagDataSet
     QByteArray gid;
 }DataSet;//通用分类服务数据集
 
+typedef struct tagASdu10LinkDataSet
+{
+    BYTE kod;
+    BYTE datatype;
+    BYTE datasize;
+    BYTE number;
+    QByteArray gid;
+}ASdu10LinkDataSet;
+
+typedef struct tagASdu10LinkData
+{
+    BYTE datatype;
+    BYTE datasize;
+    BYTE number;
+    QByteArray gid;
+}ASdu10LinkData;
+
+typedef union tagCP32TIME
+{
+    struct tagTime{
+        WORD Milliseconds;
+        BYTE Minutes;
+        BYTE Hours	:5;
+        BYTE Weeks	:3;
+    };
+    tagTime Time;
+    BYTE byte[4];
+}CP32Time2a;
+
 #pragma pack()
 
 #endif

@@ -52,10 +52,21 @@ public:
     QList<DataSet> m_DataSets;
 };
 
-//class CAsdu20 ： public CAsdu
-//{
-
-//};
+class CAsdu10Link:public CAsdu
+{
+public:
+    CAsdu10Link();
+    ~CAsdu10Link();
+    virtual void ExplianAsdu();
+public:
+    BYTE m_RII;
+    BYTE m_NOG;
+    GIN gin_h;
+    BYTE kod;
+    ASdu10LinkData d1;
+    ASdu10LinkData d2;
+    QList<ASdu10LinkDataSet> m_DataSet;
+};
 
 class CAsdu21 : public CAsdu
 {
