@@ -62,6 +62,18 @@ typedef struct tagASdu10LinkData
     QByteArray gid;
 }ASdu10LinkData;
 
+typedef union tagMEA
+{
+    struct _tagMEA
+    {
+        WORD OV		:1;//溢出位：0无溢出，1溢出
+        WORD ER		:1;//差错位：0被测值（MVAL）有效，1无效
+        WORD res 		:1;//未用
+        WORD MVAL	:13;//被测值
+    }mea;
+    WORD word;
+}MEA;
+
 typedef union tagCP32TIME
 {
     struct tagTime{
@@ -73,6 +85,14 @@ typedef union tagCP32TIME
     tagTime Time;
     BYTE byte[4];
 }CP32Time2a;
+
+typedef struct tagFileAsdu201
+{
+    BYTE m_addr;
+    WORD lubo_num;
+    QByteArray file_name;
+    QByteArray fault_time;
+}FileAsdu201;
 
 #pragma pack()
 

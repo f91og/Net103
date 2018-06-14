@@ -45,7 +45,7 @@ public:
     ~CAsdu10();
     void Init();
     virtual void ExplainAsdu(int iProcessType = 0);
-//    virtual void ExplainGID(QByteArray& Gid);
+    virtual void BuildArray(QByteArray& Data);
 
     BYTE m_RII;
     NGD m_NGD;
@@ -56,15 +56,15 @@ class CAsdu10Link:public CAsdu
 {
 public:
     CAsdu10Link();
+    CAsdu10Link(QByteArray& Data);
     ~CAsdu10Link();
-    virtual void ExplianAsdu();
 public:
     BYTE m_RII;
     BYTE m_NOG;
     GIN gin_h;
     BYTE kod;
     ASdu10LinkData d1;
-    ASdu10LinkData d2;
+    int reportArgNum;
     QList<ASdu10LinkDataSet> m_DataSet;
 };
 
@@ -84,13 +84,15 @@ class CAsdu201 : public CAsdu
 {
 public:
     CAsdu201();
-    CAsdu201(CAsdu201& a);
-    ~CAsdu201();
+    CAsdu201(QByteArray& a);
+//    ~CAsdu201(); 没有析构函数可以嘛
     virtual void BuildArray(QByteArray& Data);
-    virtual void ExplainAsdu();
 public:
+    BYTE tag;//后续标志位
     time_t start_time;
     time_t end_time;
+    WORD listNum;
+    QList<FileAsdu201> m_DataSets;
 };
 
 class CAsdu200 : public CAsdu
@@ -98,9 +100,7 @@ class CAsdu200 : public CAsdu
 public :
     CAsdu200();
     CAsdu200(CAsdu& a);
-    ~CAsdu200();
     virtual void BuildArray(QByteArray& Data);
-    virtual void ExplainAsdu();
 public:
     QByteArray file_name;
 };

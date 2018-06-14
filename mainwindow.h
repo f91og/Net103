@@ -24,7 +24,8 @@ private:
 
     void SendAsdu07();
     void SendAsdu21ForYaBan();
-    void SendAsdu21ForDingZhi();
+    void SendAsdu21ForNeiBuDingZhi();
+    void GetDeviceDingZhi();
     void GetLuBo();
     void GetDingZhi();
     void GetYaBan();
