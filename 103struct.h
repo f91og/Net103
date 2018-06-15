@@ -3,8 +3,8 @@
 
 #include <QByteArray>
 
-typedef uchar BYTE;
-typedef ushort WORD;
+typedef uchar BYTE;//无符号字符，和char一样在C和C++中占一个字节
+typedef ushort WORD;//无符号16位整数，占两个字节
 
 #pragma pack(1)
 typedef union tag103NGD
@@ -28,7 +28,8 @@ typedef union tag103GDD
     };
     taggdd gdd;
     BYTE byte[3];
-}GDD;//通用分类数据描述（GDD）：CP24{数据类型（DATATYPE），数据宽度（DATASIZE），数目（NUMBER），后续状态位（CONT）}
+}
+GDD;//通用分类数据描述（GDD）：CP24{数据类型（DATATYPE），数据宽度（DATASIZE），数目（NUMBER），后续状态位（CONT）}
 
 typedef struct tagGIN
 {
@@ -43,6 +44,55 @@ typedef struct tagDataSet
     GDD gdd;
     QByteArray gid;
 }DataSet;//通用分类服务数据集
+
+typedef struct tagASdu10LinkDataSet
+{
+    BYTE kod;
+    BYTE datatype;
+    BYTE datasize;
+    BYTE number;
+    QByteArray gid;
+}ASdu10LinkDataSet;
+
+typedef struct tagASdu10LinkData
+{
+    BYTE datatype;
+    BYTE datasize;
+    BYTE number;
+    QByteArray gid;
+}ASdu10LinkData;
+
+typedef union tagMEA
+{
+    struct _tagMEA
+    {
+        WORD OV		:1;//溢出位：0无溢出，1溢出
+        WORD ER		:1;//差错位：0被测值（MVAL）有效，1无效
+        WORD res 		:1;//未用
+        WORD MVAL	:13;//被测值
+    }mea;
+    WORD word;
+}MEA;
+
+typedef union tagCP32TIME
+{
+    struct tagTime{
+        WORD Milliseconds;
+        BYTE Minutes;
+        BYTE Hours	:5;
+        BYTE Weeks	:3;
+    };
+    tagTime Time;
+    BYTE byte[4];
+}CP32Time2a;
+
+typedef struct tagFileAsdu201
+{
+    BYTE m_addr;
+    WORD lubo_num;
+    QByteArray file_name;
+    QByteArray fault_time;
+}FileAsdu201;
 
 #pragma pack()
 

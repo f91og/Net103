@@ -7,22 +7,6 @@
 #include <QTcpSocket>
 #include "103struct.h"
 
-class QTimer ;
-class SendUdpBrocastThread : public QThread
-{
-    Q_OBJECT
-
-public :
-    SendUdpBrocastThread();
-    ~SendUdpBrocastThread();
-protected:
-    void run();
-public slots:
-    void slot_time();
-signals:
-    void sendtime(QString str);
-private:
-    QTimer *m_pTimer;
-};
+void* UDPThread(void *lp);//要使用pthread_create的话返回和参数只能是这种形式
 
 #endif // MAINSTATION_H
