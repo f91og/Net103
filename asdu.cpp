@@ -94,14 +94,15 @@ CAsdu10::~CAsdu10()
 }
 
 void CAsdu10::BuildArray(QByteArray &Data)
-{
+{   
     Data.append(m_TYP);
     Data.append(m_VSQ);
+    Data.append(m_COT);
     Data.append(m_Addr);
     Data.append(m_FUN);
     Data.append(m_INF);
     Data.append(m_RII);
-    Data.append(m_NGD);
+    Data.append(m_NGD.byte);
     DataSet data=m_DataSets.at(0);
     Data.append(data.gin.GROUP);
     Data.append(data.gin.ENTRY);
@@ -116,7 +117,6 @@ void CAsdu10::ExplainAsdu(int iProcessType) //解析收到的asdu10，将收到�
         m_NGD.byte=m_ASDUData[1];
         m_ASDUData=m_ASDUData.mid(2);
 
-        int i=0;
         DataSet* pDataSet=NULL;
         for(int i=0;i<m_NGD.byte;i++)
         {
@@ -134,7 +134,7 @@ void CAsdu10::ExplainAsdu(int iProcessType) //解析收到的asdu10，将收到�
                 memcpy(pDataSet->gid.data(), m_ASDUData.data()+3*sizeof(BYTE)+sizeof(pDataSet->gdd.byte), pDataSet->gid.size()*sizeof(BYTE));
                 m_DataSets.append(*pDataSet);
                 int len=3*sizeof(BYTE)+sizeof(pDataSet->gdd.byte)+pDataSet->gdd.gdd.DataSize*pDataSet->gdd.gdd.Number*sizeof(BYTE);
-                m_ASDUData=m_ASDUData.mid(len);//这里的户数据截取我总感觉不对
+                m_ASDUData=m_ASDUData.mid(len);//这里的数据截取我总感觉不对
             }
             else
             {
@@ -204,6 +204,7 @@ void CAsdu21::BuildArray(QByteArray &Data)
     Data.resize(11);
     Data.append(m_TYP);
     Data.append(m_VSQ);
+    Data.append(m_COT);
     Data.append(m_Addr);
     Data.append(m_FUN);
     Data.append(m_INF);
@@ -234,7 +235,7 @@ CAsdu201::CAsdu201()
     m_FUN=255;
     m_INF=0;
     end_time=time(NULL);
-    start_time=end_time-3600*12;
+    start_time=end_time-3600*24*30;
 }
 
 CAsdu201::CAsdu201(QByteArray &a)
@@ -253,7 +254,7 @@ CAsdu201::CAsdu201(QByteArray &a)
     for(int i=0;i<listNum;i++)
     {
         file=new FileAsdu201;
-        file->m_addr;
+        file->m_addr=0x01;
         file->lubo_num=(a[2]<<8) | a[3];
         file->file_name=a.mid(3,32);
         file->fault_time=a.mid(35);
@@ -289,7 +290,7 @@ CAsdu200::CAsdu200(CAsdu &a)
     //待处理...
 }
 
-CAsdu200::BuildArray(QByteArray &Data)
+void CAsdu200::BuildArray(QByteArray &Data)
 {
     Data.resize(38);
     Data[0]=m_TYP;

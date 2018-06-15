@@ -4,6 +4,7 @@
 #include <time.h>
 #include <pthread.h>
 #include <QFile>
+#include <QTextCodec>
 #include "asdu.h"
 
 bool isGetdingzhi;
@@ -29,8 +30,10 @@ void MainWindow::server_New_Connect()
     socket = server->nextPendingConnection();
     ui->textEdit_Recv->setText("客户端已连接......");
 //    SendAsdu07();
-    SendAsdu21ForYaBan();
-    SendAsdu21ForNeiBuDingZhi();
+//    SendAsdu21ForYaBan();
+//    SendAsdu21ForNeiBuDingZhi();
+//    GetDeviceDingZhi();
+    GetLuBo();
     QObject::connect(socket, &QTcpSocket::readyRead, this, &MainWindow::socket_Read_Data);
     QObject::connect(socket, &QTcpSocket::disconnected, this, &MainWindow::socket_Disconnected);
 }
@@ -66,7 +69,7 @@ void MainWindow::ExplainASDU(QByteArray &Data)
         if(a.m_iResult==0) return;
         switch (a.m_TYP) {
         case 0x0a:
-            if(Data[2]==0x02&&Data[8]==0x04)//如果循环上送的是报告，则需特殊处理
+            if((BYTE)Data[2]==0x02&&(BYTE)Data[8]==0x04)//如果循环上送的是报告，则需特殊处理
             {
                 QFile file0("E:\\Net103\\192.168.0.171-01-循环上报-动作报告.txt");
                 QString datatype="功能类型和信息序号";
@@ -90,12 +93,17 @@ void MainWindow::ExplainASDU(QByteArray &Data)
                ProcessAsdu10(a);
             }
             break;
-        case 201:
-            // process asdu201
+        case 0xc9:  // 收到的是asdu201
+        {
+            QFile file("E:\\Net103\\192.168.0.171-01-录波流水号.txt");
+            file.open(QIODevice::WriteOnly | QIODevice::Text);
+            QTextStream in(&file);
+            in.setCodec("UTF-8");
             CAsdu201 a201(Data);
             if(a201.listNum<=0) return;//有录波文件才召
             for(int i=0;i<a201.listNum;i++)
             {
+                in<<"录波流水号"<<a201.m_DataSets.at(i).lubo_num<<"\n";
                 CAsdu200 a200;
                 a200.file_name=a201.m_DataSets.at(i).file_name;
                 QByteArray sData;
@@ -103,8 +111,9 @@ void MainWindow::ExplainASDU(QByteArray &Data)
                 socket->write(sData);//这里不停的发需要另起线程的嘛？
             }
             break;
-        case 200:
-            // process asdu200，生成录播文件
+        }
+        case 0xc8:  // 收到的是asdu200
+
             break;
         default:
             break;
@@ -122,7 +131,8 @@ void MainWindow::ProcessAsdu10(CAsdu &a)
         QFile file1("E:\\Net103\\192.168.0.171-01-循环上报.txt");
         file1.open(QIODevice::WriteOnly | QIODevice::Text);
         QTextStream in(&file1);
-        in.setCodec("UTF-8");
+        in.setCodec(QTextCodec::codecForName("GB2312"));
+        QString group;
         for(int i=0;i!=a10.m_NGD.byte;i++)
         {
             DataSet data=a10.m_DataSets.at(i);
@@ -136,7 +146,8 @@ void MainWindow::ProcessAsdu10(CAsdu &a)
             default:
                 break;
             }
-            in<<group<<"--条目号："<<data.gin.ENTRY<<"--描述类别："<<data.kod<<"--通用分类标识数据："<<data.gid<<"\n";
+            qDebug()<<data.gin.GROUP<<"--"<<data.gin.ENTRY<<"--"<<data.kod<<"--"<<data.gid[0]<<"\n";
+            in<<group<<",Entry："<<data.gin.ENTRY<<",Value："<<data.gid[0]<<"\n";
         }
         file1.close();
     }
@@ -150,22 +161,18 @@ void MainWindow::ProcessAsdu10(CAsdu &a)
         {
             DataSet data=a10.m_DataSets.at(i);
             QByteArray gid=data.gid;
-            QString group;
             if(data.gin.GROUP==0x05)//告警
             {
-                group="告警";
-                QString shuangdian;
-                if((BYTE)gid[0]==0x01)
-                    shuangdian="开";
-                else
-                    shuangdian="合";
-                in<<group<<"--条目号："<<data.gin.ENTRY
-                 <<"--双点信息："<<shuangdian<<"--时间:"<<
-                   gid[4]<<"h"<<gid[3]<<"min"<<gid[1]<<gid[2]<<"ms"<<"\n";
+                in<<"组号：05H(告警)--条目号："<<data.gin.ENTRY
+                 <<"实际值(1=开，2=合)："<<gid[0]<<"--时间:"<<
+                 gid[4]<<"h"<<gid[3]<<"min"<<gid[1]<<gid[2]<<"ms"<<"\n";
                 //上面的时间信息是二进制的，需要还原
             }else if(data.gin.GROUP==0x08)//遥信变位时的带时标的遥信SOE上传
             {
-                /*这里一次性好像会收到两个报文，待处理*/
+//                in<<"组号：08H(告警)--条目号："<<data.gin.ENTRY<<"实际值(1=开，2=合)"<<gid[0];
+//                DataSet data=a10.m_DataSets.at(i+1);
+//                in<<"----时标信息："<<
+//                i=i+1;
             }
         }
         file2.close();
@@ -181,15 +188,17 @@ void MainWindow::ProcessAsdu10(CAsdu &a)
             a10_send.m_INF=0xf9;
             a10_send.m_RII=0x14;
             a10_send.m_NGD.byte=0x01;
-            DataSet data=new DataSet;
-            data.gin.GROUP=0x00;
-            data.gin.ENTRY=0x02;
-            data.gdd.taggdd.DataType=0x03;
-            data.gdd.taggdd.DataSize=0x01;
-            data.gdd.taggdd.Number=0x01;
-            data.gid=pData.gid;//将pData中的区号给data，封装在asdu10写命令中
+            //关于C++中结构体如何实例和赋值？
+            DataSet* data=NULL;
+            data=new DataSet;
+            data->gin.GROUP=0x00;
+            data->gin.ENTRY=0x02;
+            data->gdd.gdd.DataType=0x03;
+            data->gdd.gdd.DataSize=0x01;
+            data->gdd.gdd.Number=0x01;
+            data->gid=pData.gid;//将pData中的区号给data，封装在asdu10写命令中
             a10.m_DataSets.clear();
-            a10.m_DataSets.append(data);
+            a10.m_DataSets.append(*data);
             QByteArray sData;
             a10.BuildArray(sData);
             socket->write(sData);
@@ -232,7 +241,7 @@ void MainWindow::ProcessAsdu10(CAsdu &a)
             }
             file.close();
         }
-        else if(a10.m_INF=0xf1&&pData.gin.GROUP==0x02)//内部定值
+        else if(a10.m_INF==0xf1&&pData.gin.GROUP==0x02)//内部定值
         {
             QFile file("E:\\Net103\\192.168.0.171-01-装置内部定值.txt");
             file.open(QIODevice::WriteOnly | QIODevice::Text);
@@ -244,7 +253,7 @@ void MainWindow::ProcessAsdu10(CAsdu &a)
                 in<<"条目:"<<d.gin.ENTRY<<"--值："<<d.gid<<"\n";
             }
             file.close();
-        }else if(a10.m_INF=0xf1&&pData.gin.GROUP==0x0e)//压板
+        }else if(a10.m_INF==0xf1&&pData.gin.GROUP==0x0e)//压板
         {
             QFile file("E:\\Net103\\192.168.0.171-01-软压板.txt");
             file.open(QIODevice::WriteOnly | QIODevice::Text);
