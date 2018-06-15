@@ -1,4 +1,5 @@
 #include "mainstation.h"
+#include "asdu.h"
 #include <QDebug>
 #include <QtCore/QTime>
 #include <QtCore/QTimer>
@@ -7,7 +8,7 @@
 #include <QDateTime>
 #include <pthread.h>
 #include <unistd.h>
-#include "asdu.h"
+#include <QDir>
 
 void* UDPThread(void* lp)   // 想要使用pthread_create的话，这个函数的参数形式一定要是这样的
 {
@@ -39,4 +40,3 @@ void* UDPThread(void* lp)   // 想要使用pthread_create的话，这个函数�
         sleep(30);
     }
 }
-

@@ -26,7 +26,6 @@ private:
     void SendAsdu21ForYaBan();
     void SendAsdu21ForNeiBuDingZhi();
     void GetDeviceDingZhi();
-    void GetLuBo();
     void GetDingZhi();
     void GetYaBan();
 
@@ -42,8 +41,7 @@ private slots:
 
 private:
     Ui::MainWindow *ui;
-    QTcpServer* server;
-    QTcpSocket* socket;
 };
 
+void *GetLuBo(void *lp);
 #endif // MAINWINDOW_H

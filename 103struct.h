@@ -3,8 +3,8 @@
 
 #include <QByteArray>
 
-typedef uchar BYTE;
-typedef ushort WORD;
+typedef uchar BYTE;//无符号字符，和char一样在C和C++中占一个字节
+typedef ushort WORD;//无符号16位整数，占两个字节
 
 #pragma pack(1)
 typedef union tag103NGD
