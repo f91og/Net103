@@ -28,6 +28,7 @@ private:
     void GetDeviceDingZhi();
     void GetDingZhi();
     void GetYaBan();
+    void GetLuBo();
 
 private slots:
 
@@ -43,5 +44,5 @@ private:
     Ui::MainWindow *ui;
 };
 
-void *GetLuBo(void *lp);
+//void *GetLuBo(void *lp);
 #endif // MAINWINDOW_H

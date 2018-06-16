@@ -182,8 +182,6 @@ CAsdu21::CAsdu21()
     m_VSQ=0x81;
     m_COT=0x2a;
     m_FUN=0xfe;
-    m_INF=0xf1;
-    m_RII=0x00;
 
     m_DataSets.clear();
 }
@@ -195,13 +193,13 @@ CAsdu21::~CAsdu21()
 
 void CAsdu21::BuildArray(QByteArray &Data)
 {
-//    if(m_NOG!=m_DataSets.size())
-//    {
-//        m_iResult=0;
-//        return;
-//    }
-//    m_iResult=1;
-    Data.resize(11);
+    if(m_NOG!=m_DataSets.size())
+    {
+        m_iResult=0;
+        return;
+    }
+    m_iResult=1;
+    Data.resize(0);
     Data.append(m_TYP);
     Data.append(m_VSQ);
     Data.append(m_COT);
@@ -210,20 +208,12 @@ void CAsdu21::BuildArray(QByteArray &Data)
     Data.append(m_INF);
     Data.append(m_RII);
     Data.append(m_NOG);
-    BYTE group=0x0e;
-    BYTE entry=0x00;
-    BYTE kod=1;
-    Data.append(group);
-    Data.append(entry);
-    Data.append(kod);
-//    DataSet pDataSet;
-//    for(int i=0;i<m_NOG;i++)
-//    {
-//        pDataSet=m_DataSets.at(i);
-//        Data.append(pDataSet.gin.GROUP);
-//        Data.append(pDataSet.gin.ENTRY);
-//        Data.append(pDataSet.kod);
-//    }
+    for(int i=0;i<m_NOG;i++)
+    {
+        Data.append(m_DataSets.at(i).gin.GROUP);
+        Data.append(m_DataSets.at(i).gin.ENTRY);
+        Data.append(m_DataSets.at(i).kod);
+    }
 }
 
 CAsdu201::CAsdu201()
@@ -238,27 +228,27 @@ CAsdu201::CAsdu201()
     start_time=end_time-3600*24*30;
 }
 
-CAsdu201::CAsdu201(QByteArray &a)
+CAsdu201::CAsdu201(QByteArray &Data)
 {
-    m_TYP=a[0];
-    m_VSQ=a[1];
-    m_COT=a[2];
-    m_Addr=a[3];
-    m_FUN=a[4];
-    m_INF=a[5];
+    m_TYP=Data[0];
+    m_VSQ=Data[1];
+    m_COT=Data[2];
+    m_Addr=Data[3];
+    m_FUN=Data[4];
+    m_INF=Data[5];
     //start_time和end_time需要处理吗？
     //newValue = (value1<<8) | value2;
-    listNum=(a[15]<<8) | a[16];
+    listNum=(Data[15]<<8) | Data[16];
     FileAsdu201 *file=NULL;
-    a=a.mid(18);
+    Data=Data.mid(18);
     for(int i=0;i<listNum;i++)
     {
         file=new FileAsdu201;
         file->m_addr=0x01;
-        file->lubo_num=(a[2]<<8) | a[3];
-        file->file_name=a.mid(3,32);
-        file->fault_time=a.mid(35);
-        a=a.mid(42);
+        file->lubo_num=(Data[2]<<8) | Data[3];
+        file->file_name=Data.mid(3,32);
+        file->fault_time=Data.mid(35);
+        Data=Data.mid(42);
     }
 }
 
