@@ -84,7 +84,7 @@ class CAsdu201 : public CAsdu
 {
 public:
     CAsdu201();
-    CAsdu201(QByteArray& a);
+    CAsdu201(CAsdu &a);
 //    ~CAsdu201(); 没有析构函数可以嘛
     virtual void BuildArray(QByteArray& Data);
 public:
@@ -102,7 +102,10 @@ public :
     CAsdu200(CAsdu& a);
     virtual void BuildArray(QByteArray& Data);
 public:
+    QByteArray offset;
+    BYTE followTag;
     QByteArray file_name;
+    QByteArray file_content;
 };
 
 #endif // ASDU_H

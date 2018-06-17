@@ -113,7 +113,7 @@ void CAsdu10::ExplainAsdu(int iProcessType) //解析收到的asdu10，将收到�
 {
     if(iProcessType==0)
     {
-        m_RII=m_ASDUData[0];
+        m_RII=m_ASDUData[0];//此处赋值m_RII
         m_NGD.byte=m_ASDUData[1];
         m_ASDUData=m_ASDUData.mid(2);
 
@@ -228,27 +228,29 @@ CAsdu201::CAsdu201()
     start_time=end_time-3600*24*30;
 }
 
-CAsdu201::CAsdu201(QByteArray &Data)
+CAsdu201::CAsdu201(CAsdu &a)
 {
-    m_TYP=Data[0];
-    m_VSQ=Data[1];
-    m_COT=Data[2];
-    m_Addr=Data[3];
-    m_FUN=Data[4];
-    m_INF=Data[5];
+    m_TYP=a.m_TYP;
+    m_VSQ=a.m_VSQ;
+    m_COT=a.m_COT;
+    m_Addr=a.m_Addr;
+    m_FUN=a.m_FUN;
+    m_INF=a.m_INF;
     //start_time和end_time需要处理吗？
     //newValue = (value1<<8) | value2;
-    listNum=(Data[15]<<8) | Data[16];
+    QByteArray tmp=a.m_ASDUData;
+    listNum=tmp[10]<<8 | tmp[9];//取值这里终于搞明白了额
     FileAsdu201 *file=NULL;
-    Data=Data.mid(18);
+    QByteArray waveFile=a.m_ASDUData.mid(11);
     for(int i=0;i<listNum;i++)
     {
         file=new FileAsdu201;
         file->m_addr=0x01;
-        file->lubo_num=(Data[2]<<8) | Data[3];
-        file->file_name=Data.mid(3,32);
-        file->fault_time=Data.mid(35);
-        Data=Data.mid(42);
+        file->lubo_num=waveFile[2]<<8 | waveFile[1];
+        file->file_name=waveFile.mid(3,32);
+        file->fault_time=waveFile.mid(35,7);
+        waveFile=waveFile.mid(42);
+        m_DataSets.append(*file);
     }
 }
 
@@ -277,7 +279,16 @@ CAsdu200::CAsdu200()
 
 CAsdu200::CAsdu200(CAsdu &a)
 {
-    //待处理...
+    m_TYP=a.m_TYP;
+    m_VSQ=a.m_VSQ;
+    m_COT=a.m_COT;
+    m_Addr=a.m_Addr;
+    m_FUN=a.m_FUN;
+    m_INF=a.m_INF;
+
+    offset=a.m_ASDUData.mid(6,4);
+    followTag=a.m_ASDUData.at(10);
+
 }
 
 void CAsdu200::BuildArray(QByteArray &Data)

@@ -10,7 +10,6 @@
 #include <unistd.h>
 #include <QSettings>
 
-bool isGetdingzhi;
 QTcpServer* server;
 QTcpSocket* socket; 
 
@@ -36,7 +35,7 @@ void MainWindow::server_New_Connect()
     ui->textEdit_Recv->setText("客户端已连接......");
     //    SendAsdu07();
     //    SendAsdu21ForYaBan();
-    //    SendAsdu21ForNeiBuDingZhi();//貌似有问题
+    //SendAsdu21ForNeiBuDingZhi();//貌似有问题
     //    GetDeviceDingZhi();
     GetLuBo();
     //    pthread_t threadidtmp;
@@ -102,12 +101,11 @@ void MainWindow::ExplainASDU(QByteArray &Data)
             break;
         case 0xc9:  // 收到的是asdu201
         {
-            QList<CAsdu200> Asdu200List;
-            //Qt中使用QSetting类读写ini文件,https://blog.csdn.net/qiurisuixiang/article/details/7760828
             QSettings *waveFileList=new QSettings("WaveFile/192.168.0.171_CPU1/FileList.ini",QSettings::IniFormat);
             waveFileList->beginGroup("List");
-            CAsdu201 a201(Data);
-            qDebug()<<"a201.listNum"<<a201.m_DataSets.size();
+//            CAsdu201 a201(Data); 这里不能再用Data了，以上面的SaveAsdu在最后将Data清空了
+            CAsdu201 a201(a);
+            qDebug()<<a201.listNum;
             if(a201.listNum<=0) return;//有录波文件才召
             for(int i=0;i<a201.listNum;i++)
             {
@@ -171,7 +169,7 @@ void MainWindow::ProcessAsdu10(CAsdu &a)
             default:
                 break;
             }
-            qDebug()<<data.gin.GROUP<<"--"<<data.gin.ENTRY<<"--"<<data.kod<<"--"<<data.gid.toHex()<<"\n";
+            //qDebug()<<data.gin.GROUP<<"--"<<data.gin.ENTRY<<"--"<<data.kod<<"--"<<data.gid.toHex()<<"\n";
             //遥测的数据类型是带品质描述的被测值，需要特殊处理
             int entry=data.gin.ENTRY;
             QString MEA=QString(data.gid);
@@ -205,11 +203,11 @@ void MainWindow::ProcessAsdu10(CAsdu &a)
             }
         }
         file2.close();
-    }else if(a10.m_COT==0x2a)//通用分类度命令的有效数据响应
+    }else if(a10.m_COT==0x2a)//通用分类读取命令的有效数据响应
     {
-        DataSet pData=a10.m_DataSets.at(0);//将Asdu10查询到的运行定值区号(gid数据中)赋给pData
+        DataSet pData=a10.m_DataSets.at(0);
         // 读当前运行定值的区号,发Asdu10选择要读取的当前定值的区号
-        if(a10.m_INF==0xf4&&pData.gin.GROUP==0x00&&pData.gin.ENTRY==0x03)
+        if(a10.m_RII==0x06||a10.m_RII==0x08)
         {
             //发Asdu10选择要写入的定值的区号,这个区号是放在gid里的一个字节，通过指定这个区号可以实现读指定区号的定值
             CAsdu10 a10_send;
@@ -244,25 +242,26 @@ void MainWindow::ProcessAsdu10(CAsdu &a)
             sData21[5]=0xf1;
             sData21[6]=0x15;
             sData21[7]=0x01;
-            if(isGetdingzhi){
+            if(a10.m_RII==0x08){
+                sData[6]=0x09;//RII=9标记读装置定值的所有条目asdu21
                 sData21[8]=0x03;//组号--定值
-                sData21[9]=0x00;//条目号
+                sData21[9]=0x00;//所有条目
             }else
             {
+                sData21[6]=0x0a;//RII=10标记读压板所有条目的asdu21
                 sData21[8]=0x0e;//组号--压板
-                sData21[9]=0x00;//条目号
+                sData21[9]=0x00;//所有条目
             }
 
             sData21[10]=0x01;
             socket->write(sData21);
             socket->flush();
         }
-        else if(a10.m_INF==0xf1&&pData.gin.GROUP==0x03)//装置定值
+        else if(a10.m_RII==0x09)//装置定值
         {
             QFile file("E:\\Net103\\192.168.0.171-01-装置定值.txt");
             file.open(QIODevice::WriteOnly | QIODevice::Text);
             QTextStream in(&file);
-            in.setCodec("UTF-8");
             for(int i=0;i<a10.m_NGD.byte;i++)
             {
                 DataSet d=a10.m_DataSets.at(i);
@@ -270,7 +269,7 @@ void MainWindow::ProcessAsdu10(CAsdu &a)
             }
             file.close();
         }
-        else if(a10.m_INF==0xf1&&a10.m_INF==0x07)//内部定值
+        else if(a10.m_RII==0x07)//内部定值
         {
             QFile file("E:\\Net103\\192.168.0.171-01-装置内部定值.txt");
             file.open(QIODevice::WriteOnly | QIODevice::Text);
@@ -284,7 +283,7 @@ void MainWindow::ProcessAsdu10(CAsdu &a)
             }
             file.close();
         }
-        else if(a10.m_INF==0xf1&&pData.gin.GROUP==0x0e)//压板
+        else if(a10.m_RII==0x0a)//压板
         {
             QFile file("E:\\Net103\\192.168.0.171-01-软压板.txt");
             file.open(QIODevice::WriteOnly | QIODevice::Text);
@@ -308,7 +307,7 @@ void MainWindow::ProcessAsdu10(CAsdu &a)
             QTextCodec *tc=QTextCodec::codecForName("GBK");
             for(int i=0;i<a10.m_DataSets.size();i++)
             {
-                QString key=QString("WAVE_CHANNEL/")+QString(a10.m_DataSets.at(i).gin.ENTRY);
+                QString key=QString("ANALOG_CHANNEL/")+a10.m_DataSets.at(i).gin.ENTRY;
                 if(a10.m_RII==0)//如果返回的是通道描述
                 {
                     QString description=tc->toUnicode(a10.m_DataSets.at(i).gid)+",1";
@@ -339,7 +338,7 @@ void MainWindow::ProcessAsdu10(CAsdu &a)
             QTextCodec *tc=QTextCodec::codecForName("GBK");
             for(int i=0;i<a10.m_DataSets.size();i++)
             {
-                QString key=QString("WAVE_CHANNEL/")+QString(a10.m_DataSets.at(i).gin.ENTRY);
+                QString key=QString("DIGIT_CHANNEL/")+a10.m_DataSets.at(i).gin.ENTRY;
                 if(a10.m_RII==3)
                 {
                     QString description=tc->toUnicode(a10.m_DataSets.at(i).gid)+",2";
@@ -369,13 +368,12 @@ void MainWindow::SendAsdu07()
 
 void MainWindow::SendAsdu21ForYaBan()
 {
-    isGetdingzhi=false;
     //先发ASDU21读取运行值区号
     CAsdu21 a21;
     a21.m_Addr=0x01;//从别处获得
     a21.m_INF=0xf4;//读单个条目的值或属性
     a21.m_NOG=0x01;
-    a21.m_RII=0x06;
+    a21.m_RII=0x06;//06标记读压板时发送的读运行值区号asdu
     DataSet *pDataSet=new DataSet;
     pDataSet->gin.GROUP=0x00;
     pDataSet->gin.ENTRY=0x03;
@@ -407,7 +405,6 @@ void MainWindow::SendAsdu21ForNeiBuDingZhi()
 
 void MainWindow::GetDeviceDingZhi() //读当前定值
 {
-    isGetdingzhi=true;
     //先发ASDU21读取运行值区号
     QByteArray data;
     data.resize(11);
@@ -418,7 +415,7 @@ void MainWindow::GetDeviceDingZhi() //读当前定值
     data[3]=0x01;
     data[4]=0xfe;
     data[5]=0xf4;
-    data[6]=0x13;
+    data[6]=0x08;//08标记读压板时发送的读运行值区号asdu
     data[7]=0x01;
     data[8]=0x00;//组号
     data[9]=0x03;//条目号
