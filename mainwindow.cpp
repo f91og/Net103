@@ -11,7 +11,7 @@
 #include <QSettings>
 
 QTcpServer* server;
-QTcpSocket* socket; 
+QTcpSocket* socket;
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -75,14 +75,14 @@ void MainWindow::ExplainASDU(QByteArray &Data)
         if(a.m_iResult==0) return;
         switch (a.m_TYP) {
         case 0x0a:
-            if((BYTE)Data[2]==0x02&&(BYTE)Data[8]==0x04)//如果循环上送的是报告，则需特殊处理
+            if(a.m_COT==0x02&&a.m_ASDUData.at(1)==0x04)//如果循环上送的是报告，则需特殊处理
             {
                 QFile file0("E:\\Net103\\192.168.0.171-01-循环上报-动作报告.txt");
                 QString datatype="功能类型和信息序号";
                 file0.open(QIODevice::WriteOnly | QIODevice::Text);
                 QTextStream in(&file0);
                 in.setCodec("UTF-8");
-                CAsdu10Link a10link(Data);
+                CAsdu10Link a10link(a);
                 in<<"动作报告--"<<"条目号："<<a10link.gin_h.ENTRY<<"--"
                  <<"共有"<<a10link.reportArgNum<<"个动作参数"
                 <<"--通用分类标识数据："<<a10link.d1.gid<<"\n";
@@ -105,36 +105,71 @@ void MainWindow::ExplainASDU(QByteArray &Data)
             waveFileList->beginGroup("List");
 //            CAsdu201 a201(Data); 这里不能再用Data了，以上面的SaveAsdu在最后将Data清空了
             CAsdu201 a201(a);
-            qDebug()<<a201.listNum;
             if(a201.listNum<=0) return;//有录波文件才召
             for(int i=0;i<a201.listNum;i++)
             {
                 int num=a201.m_DataSets.at(i).lubo_num;
                 waveFileList->setValue(QString(i+1),QString(num));
+            }
+            waveFileList->endGroup();
+            delete waveFileList;
+
+            QList<CAsdu200> a200_list;
+            for(int i=0;i<a201.listNum;i++)
+            {
+
                 CAsdu200 a200;
                 a200.file_name=a201.m_DataSets.at(i).file_name;
                 QByteArray sData;
                 a200.BuildArray(sData);
                 socket->write(sData);
                 socket->flush();
+                while(true)
+                {
+                    qDebug()<<a200.file_name;
+                    QByteArray data=socket->readAll();
+                    if(data.size()<=0) continue;
+                    CAsdu a;
+                    a.m_ASDUData.resize(0);
+                    a.SaveAsdu(data);
+                    CAsdu200 a200_rec(a);
+                    if(a200.followTag==0)
+                    {
+                        QFile file("E:\\Net103\\WaveFile\\192.168.0.171_CPU1\\"+QString::fromLocal8Bit(a200.file_name)+".datagram");
+                        file.open(QIODevice::WriteOnly | QIODevice::Text);
+                        QTextStream in(&file);
+                        for(CAsdu200 a200_i:a200_list)
+                        {
+                            for(int i=0;i<a200_i.all_packet.size();i++)
+                            {
+                                in<<a200_i.all_packet.mid(i,i).toHex();
+                                if(i!=0&&((i+1)%16==0)) in<<"\n";
+                            }
+                        }
+                        file.close();
+                        a200_list.clear();
+                        break;
+                    }else{
+                        a200_list.append(a200_rec);
+                    }
+                }
             }
-            waveFileList->endGroup();
-            delete waveFileList;
             break;
         }
         case 0xc8:  // 收到的是asdu200，将asud200存成datagram数据文件,这里可能会收到不同子站的asdu200
         {   //首先要判断ip和应用服务单元公共地址，确定写入哪个文件夹
-            QByteArray name=Data.mid(13,31);//取文件名称
-            QTextCodec *codec=QTextCodec::codecForName("GBK");//解决乱码问题
-            QString str=codec->toUnicode(name);
-            QFile file("E:\\Net103\\WaveFile\\192.168.0.171_CPU1\\00001.datagram");
+            CAsdu200 a200(a);
+//            QString str=QString::fromLocal8Bit(name);
+            ushort i=0;
+            QFile file("E:\\Net103\\WaveFile\\192.168.0.171_CPU1\\录波数据包"+(i++)+".datagram");
             file.open(QIODevice::WriteOnly | QIODevice::Text);
             QTextStream in(&file);
-            for(int i=0;i<Data.size();i++)
+            for(int i=0;i<a200.all_packet.size();i++)
             {
-                in<<Data.mid(i,i).toHex()<<" ";
+                in<<a200.all_packet.mid(i,i).toHex();
                 if(i!=0&&((i+1)%16==0)) in<<"\n";
             }
+            in<<"\n";
             file.close();
             break;
         }

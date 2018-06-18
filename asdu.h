@@ -56,7 +56,7 @@ class CAsdu10Link:public CAsdu
 {
 public:
     CAsdu10Link();
-    CAsdu10Link(QByteArray& Data);
+    CAsdu10Link(CAsdu &a);
     ~CAsdu10Link();
 public:
     BYTE m_RII;
@@ -105,7 +105,7 @@ public:
     QByteArray offset;
     BYTE followTag;
     QByteArray file_name;
-    QByteArray file_content;
+    QByteArray all_packet;
 };
 
 #endif // ASDU_H

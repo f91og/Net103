@@ -146,27 +146,28 @@ void CAsdu10::ExplainAsdu(int iProcessType) //解析收到的asdu10，将收到�
 }
 
 /////////// ASDU10Link /////////
-CAsdu10Link::CAsdu10Link(QByteArray& Data)
+CAsdu10Link::CAsdu10Link(CAsdu &a)
 {
     gin_h.GROUP=0x04;
-    gin_h.ENTRY=Data[9];
-    reportArgNum=Data[12];
-    d1.gid=Data.mid(14,reportArgNum);
-    int start_index=22+reportArgNum;
-    Data=Data.mid(start_index);
+    gin_h.ENTRY=a.m_ASDUData.at(2);
+    reportArgNum=a.m_ASDUData.at(5);
+    d1.gid=a.m_ASDUData.mid(7,reportArgNum);
+    int start_index=16+reportArgNum;
+    a.m_ASDUData=a.m_ASDUData.mid(start_index);
     ASdu10LinkDataSet *pDataSet=NULL;
     for(int i=0;i<reportArgNum*3;i++)
     {
         pDataSet=new ASdu10LinkDataSet;
-        pDataSet->kod=Data[0];
-        pDataSet->datatype=Data[1];
-        pDataSet->datasize=Data[2];
-        pDataSet->number=Data[3];
-        pDataSet->gid=Data.mid(4,pDataSet->datasize);
+        pDataSet->kod=a.m_ASDUData.at(0);
+        pDataSet->datatype=a.m_ASDUData.at(1);
+        pDataSet->datasize=a.m_ASDUData.at(2);
+        pDataSet->number=a.m_ASDUData.at(3);
+        pDataSet->gid=a.m_ASDUData.mid(4,pDataSet->datasize);
         int len=4*sizeof(BYTE)+sizeof(pDataSet->datasize*pDataSet->number);
-        Data=Data.mid(len+1);
+        a.m_ASDUData=a.m_ASDUData.mid(len+1);
         m_DataSet.append(*pDataSet);
     }
+    a.m_ASDUData.resize(0);
 }
 
 CAsdu10Link::~CAsdu10Link()
@@ -252,6 +253,7 @@ CAsdu201::CAsdu201(CAsdu &a)
         waveFile=waveFile.mid(42);
         m_DataSets.append(*file);
     }
+    a.m_ASDUData.resize(0);
 }
 
 void CAsdu201::BuildArray(QByteArray &Data)
@@ -288,18 +290,26 @@ CAsdu200::CAsdu200(CAsdu &a)
 
     offset=a.m_ASDUData.mid(6,4);
     followTag=a.m_ASDUData.at(10);
-
+    file_name=a.m_ASDUData.mid(7,32);
+    all_packet.append(m_TYP);
+    all_packet.append(m_VSQ);
+    all_packet.append(m_COT);
+    all_packet.append(m_Addr);
+    all_packet.append(m_FUN);
+    all_packet.append(m_INF);
+    all_packet.append(a.m_ASDUData);
+    a.m_ASDUData.resize(0);
 }
 
 void CAsdu200::BuildArray(QByteArray &Data)
 {
-    Data.resize(38);
-    Data[0]=m_TYP;
-    Data[1]=m_VSQ;
-    Data[2]=m_COT;
-    Data[3]=m_Addr;
-    Data[4]=m_FUN;
-    Data[5]=m_INF;
-    memcpy(Data.data()+6,file_name.data(),32);
+    Data.resize(0);
+    Data.append(m_TYP);
+    Data.append(m_VSQ);
+    Data.append(m_COT);
+    Data.append(m_Addr);
+    Data.append(m_FUN);
+    Data.append(m_INF);
+    Data.append(file_name);
 }
 
