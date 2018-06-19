@@ -95,6 +95,7 @@ CAsdu10::~CAsdu10()
 
 void CAsdu10::BuildArray(QByteArray &Data)
 {   
+    Data.resize(0);
     Data.append(m_TYP);
     Data.append(m_VSQ);
     Data.append(m_COT);

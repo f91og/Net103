@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include <QTcpServer>
 #include <QTcpSocket>
+#include <QMap>
 #include "asdu.h"
 
 namespace Ui {
@@ -33,16 +34,19 @@ private:
 private slots:
 
     void server_New_Connect();
-
     void socket_Read_Data();
-
     void socket_Disconnected();
-
     void on_start_button_clicked();
+    void onTimerOut();
 
 private:
     Ui::MainWindow *ui;
+    QTcpServer* server;
+    QTcpSocket* socket;
+    QTimer *timer;
+
+    QMap<QString, QList<CAsdu200>> a200_list;
+    QList<QTcpSocket*> socket_list;
 };
 
-//void *GetLuBo(void *lp);
 #endif // MAINWINDOW_H
