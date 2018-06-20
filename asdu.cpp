@@ -150,12 +150,13 @@ void CAsdu10::ExplainAsdu(int iProcessType) //解析收到的asdu10，将收到�
 CAsdu10Link::CAsdu10Link(CAsdu &a)
 {
     gin_h.GROUP=0x04;
-    gin_h.ENTRY=a.m_ASDUData.at(2);
-    reportArgNum=a.m_ASDUData.at(5);
-    d1.gid=a.m_ASDUData.mid(7,reportArgNum);
-    int start_index=16+reportArgNum;
-    a.m_ASDUData=a.m_ASDUData.mid(start_index);
+    gin_h.ENTRY=a.m_ASDUData.at(3);
+    reportArgNum=a.m_ASDUData.at(6);
+    time=a.m_ASDUData.mid(9,9);
+    a.m_ASDUData=a.m_ASDUData.mid(18);
     ASdu10LinkDataSet *pDataSet=NULL;
+    qDebug()<<"开始封装";
+    qDebug()<<a.m_ASDUData.toHex();
     for(int i=0;i<reportArgNum*3;i++)
     {
         pDataSet=new ASdu10LinkDataSet;
@@ -164,8 +165,10 @@ CAsdu10Link::CAsdu10Link(CAsdu &a)
         pDataSet->datasize=a.m_ASDUData.at(2);
         pDataSet->number=a.m_ASDUData.at(3);
         pDataSet->gid=a.m_ASDUData.mid(4,pDataSet->datasize);
-        int len=4*sizeof(BYTE)+sizeof(pDataSet->datasize*pDataSet->number);
-        a.m_ASDUData=a.m_ASDUData.mid(len+1);
+        int len=4+pDataSet->datasize;
+        a.m_ASDUData=a.m_ASDUData.mid(len);
+        qDebug()<<pDataSet->kod<<"----"<<pDataSet->datatype<<"----"<<pDataSet->datasize<<
+                  "----"<<pDataSet->number<<"----"<<QString::fromLocal8Bit(pDataSet->gid);
         m_DataSet.append(*pDataSet);
     }
     a.m_ASDUData.resize(0);
@@ -227,7 +230,7 @@ CAsdu201::CAsdu201()
     m_FUN=255;
     m_INF=0;
     end_time=time(NULL);
-    start_time=end_time-3600*24*30;
+    start_time=end_time-3600*24*3600;
 }
 
 CAsdu201::CAsdu201(CAsdu &a)

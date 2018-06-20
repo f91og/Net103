@@ -64,7 +64,8 @@ public:
     GIN gin_h;
     BYTE kod;
     ASdu10LinkData d1;
-    int reportArgNum;
+    BYTE reportArgNum;
+    QByteArray time;
     QList<ASdu10LinkDataSet> m_DataSet;
 };
 
