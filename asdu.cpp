@@ -292,9 +292,10 @@ CAsdu200::CAsdu200(CAsdu &a)
     m_FUN=a.m_FUN;
     m_INF=a.m_INF;
 
-    offset=a.m_ASDUData.mid(6,4);
-    followTag=a.m_ASDUData.at(10);
+    offset=a.m_ASDUData.mid(0,4);
+    followTag=a.m_ASDUData.at(4);
     file_name=a.m_ASDUData.mid(7,32);
+    all_packet.resize(0);
     all_packet.append(m_TYP);
     all_packet.append(m_VSQ);
     all_packet.append(m_COT);

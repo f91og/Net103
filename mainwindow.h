@@ -19,6 +19,9 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
+signals:
+    void reciveAllLuBoPakcet(const QByteArray & file_name) const;
+
 private:
     void ExplainASDU(QByteArray& Data);
     void ProcessAsdu10(CAsdu& a);
@@ -29,7 +32,10 @@ private:
     void GetDeviceDingZhi();
     void GetDingZhi();
     void GetYaBan();
-    void GetLuBo();
+    void GetLuBo(const QByteArray & file_name);//这个和不加const和引用的传参有什么区别？
+    void BeforeGetLuBo();
+    void GetBaoHu();
+    void SendAsdu21(const BYTE &m_addr, const BYTE &m_RII, const BYTE &m_INF,const BYTE &NGD, DataSet *pDataSet);
 
 private slots:
 
@@ -45,7 +51,8 @@ private:
     QTcpSocket* socket;
     QTimer *timer;
 
-    QMap<QString, QList<CAsdu200>> a200_list;
+    QList<QByteArray> luBo_list;
+    QList<CAsdu200> a200_list;
     QList<QTcpSocket*> socket_list;
 };
 
