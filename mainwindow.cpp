@@ -33,9 +33,9 @@ void MainWindow::server_New_Connect()
     socket_list.append(socket);
     ui->textEdit_Recv->setText("客户端已连接......");
     //   SendAsdu07();
-    //    SendAsdu21ForYaBan();
-        SendAsdu21ForNeiBuDingZhi();
-    //    GetDeviceDingZhi();
+    //   GetYaBan();
+    //   GetNeiBuDingZhi(0x00,1);
+    //   GetDeviceDingZhi();
     QObject::connect(socket, &QTcpSocket::readyRead, this, &MainWindow::socket_Read_Data);
     QObject::connect(socket, &QTcpSocket::disconnected, this, &MainWindow::socket_Disconnected);
     QObject::connect(this,&MainWindow::reciveAllLuBoPakcet,this,&MainWindow::GetLuBo);
@@ -126,7 +126,7 @@ void MainWindow::ExplainASDU(QByteArray &Data)
                 {
                     for(int i=0;i<a.all_packet.size();i++)
                     {
-                        in<<a.all_packet.at(i);
+                        in<<a.all_packet.mid(i,1).toHex();//目前只能通过先取子字节数组再转16进制这样来避免乱码了
                         in<<" ";
                         if(i!=0&&((i+1)%16==0)) in<<"\n";
                     }
@@ -263,26 +263,18 @@ void MainWindow::ProcessAsdu10(CAsdu &a)
             socket->flush();
 
             //发Asdu21读定值或压板的全部条目
-            CAsdu21 a21_send;
-            a21_send.m_Addr=0x01;
-            a21_send.m_INF=0xf1;\
-            a21_send.m_NOG=0x01;
             DataSet *pDataSet = new DataSet;
+            pDataSet->kod=0x01;//kod=1 召实际值
             if(a10.m_RII==0x08){
-                a21_send.m_RII=0x11;//RII=11标记读装置定值的所有条目asdu21
                 pDataSet->gin.GROUP=0x03;//组号--定值
                 pDataSet->gin.ENTRY=0x00;//所有条目
+                SendAsdu21(0x01,0x11,0xf1,0x01,pDataSet);//RII=11标记读装置定值的所有条目asdu21
             }else
             {
-                a21_send.m_RII=0x0a;//RII=10标记读压板所有条目的asdu21
                 pDataSet->gin.GROUP=0x0e;//组号--压板
                 pDataSet->gin.GROUP=0x00;//所有条目
+                SendAsdu21(0x01,0x0a,0xf1,0x01,pDataSet);//RII=11标记读装置定值的所有条目asdu2
             }
-            pDataSet->kod=0x01;//kod
-            a21_send.m_DataSets.append(*pDataSet);
-            a21_send.BuildArray(sData);
-            socket->write(sData);
-            socket->flush();
         }
         else if(a10.m_RII==0x11)//装置定值
         {
@@ -403,61 +395,33 @@ void MainWindow::ProcessAsdu10(CAsdu &a)
     }
 }
 
-void MainWindow::SendAsdu07()
-{
-    CAsdu07 a07;
-    a07.m_Addr=0xff;//这里是广播发送，我感觉应该是到数据库中取才对
-    QByteArray sData;
-    a07.BuildArray(sData);
-    socket->write(sData);
-    socket->flush();
-}
-
-void MainWindow::SendAsdu21ForYaBan()
+void MainWindow::GetYaBan()
 {
     //先发ASDU21读取运行值区号
-    CAsdu21 a21;
-    a21.m_Addr=0x01;//从别处获得
-    a21.m_INF=0xf4;//读单个条目的值或属性
-    a21.m_NOG=0x01;
-    a21.m_RII=0x06;//06标记读压板时发送的读运行值区号asdu
     DataSet *pDataSet=new DataSet;
     pDataSet->gin.GROUP=0x00;
     pDataSet->gin.ENTRY=0x03;
     pDataSet->kod=0x01;//kod=1表示要读的是条目的实际值，而不是条目的描述
-    a21.m_DataSets.append(*pDataSet);
-    QByteArray data;
-    a21.BuildArray(data);
-    socket->write(data);
-    socket->flush();
-}
-
-void MainWindow::SendAsdu21ForNeiBuDingZhi()
-{
-    DataSet *pDataSet=new DataSet;
-    pDataSet->gin.GROUP=0x02;
-    pDataSet->gin.ENTRY=0x00;
-    pDataSet->kod=0x01;//kod=1表示要读的是条目的实际值，而不是条目的描述
-    SendAsdu21(0x01,0x07,0xf1,0x01,pDataSet);
+    SendAsdu21(0x01,0x06,0xf4,0x01,pDataSet);
 }
 
 void MainWindow::GetDeviceDingZhi() //读当前定值
 {
     //先发ASDU21读取运行值区号
-    CAsdu21 a21;
-    a21.m_Addr=0x01;
-    a21.m_INF=0xf4;
-    a21.m_NOG=0x01;
-    a21.m_RII=0x08;//08标记读压板时发送的读运行值区号asdu
     DataSet *pDataSet=new DataSet;//这里为什么既能用指针也能用(引用？值？)
     pDataSet->gin.GROUP=0x00;
     pDataSet->gin.GROUP=0x03;
     pDataSet->kod=0x01;
-    a21.m_DataSets.append(*pDataSet);
-    QByteArray data;
-    a21.BuildArray(data);
-    socket->write(data);
-    socket->flush();
+    SendAsdu21(0x01,0xf4,0x08,0x01,pDataSet);
+}
+
+void MainWindow::GetNeiBuDingZhi(const BYTE &m_addr,const BYTE &entry,const BYTE &kod)
+{
+    DataSet *pDataSet=new DataSet;
+    pDataSet->gin.GROUP=0x02;
+    pDataSet->gin.ENTRY=entry;
+    pDataSet->kod=kod;
+    SendAsdu21(m_addr,0xf1,0x07,0x01,pDataSet);
 }
 
 void MainWindow::GetLuBo(const QByteArray & file_name)
@@ -485,11 +449,6 @@ void MainWindow::GetLuBo(const QByteArray & file_name)
     socket->flush();
 }
 
-void MainWindow::onTimerOut()
-{
-
-}
-
 void MainWindow::BeforeGetLuBo()
 {
     //生成故障录波文件目录
@@ -510,17 +469,31 @@ void MainWindow::BeforeGetLuBo()
 
     //向数据库查询现有装置的ip和cpu号，写文件目录和文件，我这里先固定写一个装置的情形
     dir.mkdir("WaveFile/192.168.0.171_CPU1");
+    GetChannel(0x01);
+    CAsdu201 a201;
+    QByteArray sData;
+    sData.resize(0);
+    a201.BuildArray(sData);
+    socket->write(sData);
+    socket->flush();
+}
 
+void MainWindow::GetBaoHu(const BYTE &m_addr,const BYTE & entry, const BYTE & kod)
+{
+    //先发ASDU21读取运行值区号
+    DataSet *pDataSet=new DataSet;//这里为什么既能用指针也能用(引用？值？)
+    pDataSet->gin.GROUP=0x06;
+    pDataSet->gin.ENTRY=entry;
+    pDataSet->kod=kod;//读实际值
+    SendAsdu21(m_addr,0x0b,0xf1,0x01,pDataSet);
+}
+
+void MainWindow::GetChannel(const BYTE &m_addr)
+{
     /*设备通道信息分为数字通道，和模拟通道。模拟通道除了需要召唤数据外，还需要召唤通道描述，量纲，计算系数(实际值)。
           数字通道则只需要召唤描述和数据。模拟通道的组号是0x1D，数字通道的组号是0x20。要分开召*/
-    QByteArray sData;
-    CAsdu21 a21;
-    a21.m_INF=0xf1;//读一个组的全部条目
-    a21.m_Addr=0x01;//
-    a21.m_NOG=0x01;
     for(int i=0;i<5;i++)
     {
-        a21.m_RII=i;
         DataSet *pDataSet=new DataSet;
         //召唤模拟通道所有条目的描述，量纲，计算系数(实际值)
         if(i<3)
@@ -530,49 +503,30 @@ void MainWindow::BeforeGetLuBo()
             if(i==0) pDataSet->kod=10;//通道描述
             if(i==1) pDataSet->kod=9;//量纲（单位）
             if(i==2) pDataSet->kod=1;//实际值
+            SendAsdu21(m_addr,i,0xf1,0x01,pDataSet);
         }else//召唤数字信道的描述的实际值
         {
             pDataSet->gin.GROUP=0x20;
             pDataSet->gin.ENTRY=0x00;
             if(i==3) pDataSet->kod=10;
             if(i==4) pDataSet->kod=1;
+            SendAsdu21(m_addr,i,0xf1,0x01,pDataSet);
         }
-        a21.m_DataSets.clear();
-        a21.m_DataSets.append(*pDataSet);
-        pDataSet=NULL;
-        a21.BuildArray(sData);
-        socket->write(sData);
-        socket->flush();
+        delete pDataSet;
     }
-    //故障录波文件,先将已有的录波文件删除
-
-    //    CAsdu201 a201;
-    //    sData.resize(0);
-    //    a201.BuildArray(sData);
-    //    socket->write(sData);
-    //    socket->flush();
 }
 
-void MainWindow::GetBaoHu()
+void MainWindow::SendAsdu07()
 {
-    //先发ASDU21读取运行值区号
-    CAsdu21 a21;
-    a21.m_Addr=0x01;
-    a21.m_INF=0xf1;
-    a21.m_NOG=0x01;
-    a21.m_RII=0x0b;//12标记读保护测量时发的asdu21
-    DataSet *pDataSet=new DataSet;//这里为什么既能用指针也能用(引用？值？)
-    pDataSet->gin.GROUP=0x06;
-    pDataSet->gin.GROUP=0x00;
-    pDataSet->kod=0x01;//读实际值
-    a21.m_DataSets.append(*pDataSet);
-    QByteArray data;
-    a21.BuildArray(data);
-    socket->write(data);
+    CAsdu07 a07;
+    a07.m_Addr=0xff;//这里是广播发送，我感觉应该是到数据库中取才对
+    QByteArray sData;
+    a07.BuildArray(sData);
+    socket->write(sData);
     socket->flush();
 }
 
-void MainWindow::SendAsdu21(const BYTE &m_addr, const BYTE &m_RII, const BYTE &m_INF, const BYTE &m_NGD, DataSet *pDataSet)
+void MainWindow::SendAsdu21(const BYTE &m_addr, const BYTE &m_INF, const BYTE &m_RII, const BYTE &m_NGD, DataSet *pDataSet)
 {
     CAsdu21 a21;
     a21.m_Addr=m_addr;
@@ -585,4 +539,9 @@ void MainWindow::SendAsdu21(const BYTE &m_addr, const BYTE &m_RII, const BYTE &m
     a21.BuildArray(sData);
     socket->write(sData);
     socket->flush();
+}
+
+void MainWindow::onTimerOut()
+{
+
 }

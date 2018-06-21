@@ -27,15 +27,16 @@ private:
     void ProcessAsdu10(CAsdu& a);
 
     void SendAsdu07();
-    void SendAsdu21ForYaBan();
-    void SendAsdu21ForNeiBuDingZhi();
+    void SendAsdu21(const BYTE &m_addr, const BYTE &m_RII, const BYTE &m_INF,const BYTE &NGD, DataSet *pDataSet);
+    //void SendAsdu10();
+
+    void GetNeiBuDingZhi(const BYTE &m_addr,const BYTE &entry,const BYTE &kod);
     void GetDeviceDingZhi();
-    void GetDingZhi();
     void GetYaBan();
+    void GetBaoHu(const BYTE &m_addr,const BYTE & entry,const BYTE &kod);//参数的条目和要读这个条目的什么值(描述，量纲等)
+    void GetChannel(const BYTE &m_addr);
     void GetLuBo(const QByteArray & file_name);//这个和不加const和引用的传参有什么区别？
     void BeforeGetLuBo();
-    void GetBaoHu();
-    void SendAsdu21(const BYTE &m_addr, const BYTE &m_RII, const BYTE &m_INF,const BYTE &NGD, DataSet *pDataSet);
 
 private slots:
 
