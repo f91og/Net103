@@ -55,6 +55,7 @@ private:
     QList<QByteArray> luBo_list;
     QList<CAsdu200> a200_list;
     QList<QTcpSocket*> socket_list;
+    QList<CAsdu10> asdu_buffer;
 };
 
 #endif // MAINWINDOW_H

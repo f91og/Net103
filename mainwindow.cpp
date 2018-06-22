@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <QSettings>
 #include <QTimer>
+#include <QDateTime>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -92,8 +93,7 @@ void MainWindow::ExplainASDU(QByteArray &Data)
             for(int i=0;i<a201.listNum;i++)
             {
                 int num=a201.m_DataSets.at(i).lubo_num;
-                qDebug()<<num;
-                //waveFileList->setValue(i+1,num);//这里要格式化数字
+                waveFileList->setValue(QString::number(i+1),QString("%1").arg(num, 5, 10, QChar('0')));//这里要格式化数字
             }
             waveFileList->endGroup();
             delete waveFileList;
@@ -113,6 +113,7 @@ void MainWindow::ExplainASDU(QByteArray &Data)
             //首先要判断ip和应用服务单元公共地址，确定写入哪个文件夹
             qDebug()<<"Recive asdu200......";
             CAsdu200 a200(a);
+            a200_list.append(a200);
             qDebug()<<"Follow Tag:"<<a200.followTag;
             if(a200.followTag==0)//传输完成
             {
@@ -143,8 +144,6 @@ void MainWindow::ExplainASDU(QByteArray &Data)
                         emit reciveAllLuBoPakcet(luBo_list.at(i+1));
                     }
                 }
-            }else{
-                a200_list.append(a200);
             }
             break;
         }
@@ -236,11 +235,9 @@ void MainWindow::ProcessAsdu10(CAsdu &a)
         file.close();
     }else if(a10.m_COT==0x2a)//通用分类读取命令的有效数据响应
     {
-        DataSet pData=a10.m_DataSets.at(0);
         // 读当前运行定值的区号,发Asdu10选择要读取的当前定值的区号
         if(a10.m_RII==0x06||a10.m_RII==0x08)
         {
-            qDebug()<<"read dingzhi num";
             //发Asdu10选择要写入的定值的区号,这个区号是放在gid里的一个字节，通过指定这个区号可以实现读指定区号的定值
             CAsdu10 a10_send;
             a10_send.m_Addr=0x01;//这个addr需从别处查来的
@@ -254,7 +251,7 @@ void MainWindow::ProcessAsdu10(CAsdu &a)
             data->gdd.gdd.DataType=0x03;
             data->gdd.gdd.DataSize=0x01;
             data->gdd.gdd.Number=0x01;
-            data->gid=pData.gid;//将pData中的区号给data，封装在asdu10写命令中
+            data->gid=a10.m_DataSets.at(0).gid;//将pData中的区号给data，封装在asdu10写命令中
             a10.m_DataSets.clear();
             a10.m_DataSets.append(*data);
             QByteArray sData;
@@ -321,62 +318,63 @@ void MainWindow::ProcessAsdu10(CAsdu &a)
         }
         else if(a10.m_RII<3)//模拟信道
         {
-            QSettings *moni=new QSettings("Device_Info/WaveChannel/192.168.0.171_CPU1.ini",QSettings::IniFormat);
+            qDebug()<<"接收模拟信道的asdu10"<<a10.m_RII;
+            QString ip=socket->peerAddress().toString();//取ip地址
+            //QString file_path //如何在当前目录下创建ini文件呢？
+            QSettings *moni=new QSettings("H:/GraduationProject/Net103/Device_Info/WaveChannel/192.168.0.171_CPU1.ini",QSettings::IniFormat);
+            moni->setIniCodec("GBK");
             moni->setValue("/Device/ID",QString(a10.m_Addr));
             moni->setValue("/Device/NAME","10kV线路保护");
-            moni->setValue("/Device/ANALOG_CHANNEL",(int)a10.m_NGD.byte);
-            moni->setValue("/Device/CREATE_TIME","????");//要从数据库中查？
-            QTextCodec *tc=QTextCodec::codecForName("GBK");
             moni->beginGroup("ANALOG_CHANNEL");
             for(int i=0;i<a10.m_DataSets.size();i++)
             {
-                QChar key=a10.m_DataSets.at(i).gin.ENTRY;
+                QString key=QString::number((int)a10.m_DataSets.at(i).gin.ENTRY);
                 if(a10.m_RII==0)//如果返回的是通道描述
                 {
-                    QString description=tc->toUnicode(a10.m_DataSets.at(i).gid)+",1";
+                    QString description=QString::fromLocal8Bit(a10.m_DataSets.at(i).gid);
                     moni->setValue(key,description);
                 }
                 else if(a10.m_RII==1)//量纲
                 {
                     QString formalValue=moni->value(key).toString();
-                    QString newValue=formalValue+","+tc->toUnicode(a10.m_DataSets.at(i).gid);
+                    QString newValue=formalValue.append(QString::fromLocal8Bit(a10.m_DataSets.at(i).gid));
                     moni->setValue(key,newValue);
                 }
                 else if(a10.m_RII==2)//实际值，计算系数
                 {
                     QString formalValue=moni->value(key).toString();
-                    QString newValue=formalValue+","+a10.m_DataSets.at(i).gid.toFloat();
+                    QString newValue=formalValue.append(QString("%1").arg(a10.m_DataSets.at(i).gid.toFloat()));
                     moni->setValue(key,newValue);
                 }
             }
+            int num=moni->childKeys().size();
             moni->endGroup();
+            moni->setValue("/Device/ANALOG_CHANNEL",num);
             delete moni;
         }
-        else if(a10.m_RII==3||a10.m_RII==4)//数字信道,3表示标记返回的是描述，4标记返回的是实际值
+        else if(a10.m_RII==4)//数字信道,只召唤描述
         {
-            QSettings *shuzi=new QSettings("Device_Info/WaveChannel/192.168.0.171_CPU1.ini",QSettings::IniFormat);
+            qDebug()<<"接收数字信道的asdu10"<<a10.m_RII;
+            QSettings *shuzi=new QSettings("H:/GraduationProject/Net103/Device_Info/WaveChannel/192.168.0.171_CPU1.ini",QSettings::IniFormat);
+            shuzi->setIniCodec("GBK");
             shuzi->setValue("/Device/ID",QString(a.m_Addr));
             shuzi->setValue("/Device/NAME","10kV线路保护");
-            shuzi->setValue("/Device/DIGIT_CHANNEL",(int)a10.m_NGD.byte);
-            QTextCodec *tc=QTextCodec::codecForName("GBK");
             shuzi->beginGroup("DIGIT_CHANNEL");
             for(int i=0;i<a10.m_DataSets.size();i++)
             {
-                QChar key=a10.m_DataSets.at(i).gin.ENTRY;
-                qDebug()<<"DIGIT_CHANNEL_KEY:"<<key;
-                if(a10.m_RII==3)
+                QString key=QString::number((int)a10.m_DataSets.at(i).gin.ENTRY);
+                if(a10.m_RII==4)
                 {
-                    QString description=tc->toUnicode(a10.m_DataSets.at(i).gid)+",2";
+                    QString description=QString::fromLocal8Bit(a10.m_DataSets.at(i).gid);
                     shuzi->setValue(key,description);
                 }
-                else if(a10.m_RII==4)
-                {
-                    QString formalValue=shuzi->value(key).toString();
-                    QString newValue=formalValue+","+a10.m_DataSets.at(i).gid.toFloat();
-                    shuzi->setValue(key,newValue);
-                }
             }
+            int num=shuzi->childKeys().size();
             shuzi->endGroup();
+            shuzi->setValue("/Device/DIGIT_CHANNEL",num);
+            QDateTime current_date_time =QDateTime::currentDateTime();
+            QString current_date =current_date_time.toString("yyyy.MM.dd hh:mm:ss.zzz ddd");
+            shuzi->setValue("/Device/CREATE_TIME",current_date);
             delete shuzi;
         }
         else if(a10.m_RII==0x0b)//保护测量
@@ -402,7 +400,7 @@ void MainWindow::GetYaBan()
     pDataSet->gin.GROUP=0x00;
     pDataSet->gin.ENTRY=0x03;
     pDataSet->kod=0x01;//kod=1表示要读的是条目的实际值，而不是条目的描述
-    SendAsdu21(0x01,0x06,0xf4,0x01,pDataSet);
+    SendAsdu21(0x01,0xf4,0x06,0x01,pDataSet);
 }
 
 void MainWindow::GetDeviceDingZhi() //读当前定值
@@ -503,14 +501,13 @@ void MainWindow::GetChannel(const BYTE &m_addr)
             if(i==0) pDataSet->kod=10;//通道描述
             if(i==1) pDataSet->kod=9;//量纲（单位）
             if(i==2) pDataSet->kod=1;//实际值
-            SendAsdu21(m_addr,i,0xf1,0x01,pDataSet);
-        }else//召唤数字信道的描述的实际值
+            SendAsdu21(m_addr,0xf1,i,0x01,pDataSet);
+        }else//召唤数字信道的描述
         {
             pDataSet->gin.GROUP=0x20;
             pDataSet->gin.ENTRY=0x00;
-            if(i==3) pDataSet->kod=10;
-            if(i==4) pDataSet->kod=1;
-            SendAsdu21(m_addr,i,0xf1,0x01,pDataSet);
+            if(i==4) pDataSet->kod=10;
+            SendAsdu21(m_addr,0xf1,i,0x01,pDataSet);
         }
         delete pDataSet;
     }
