@@ -8,9 +8,15 @@
 
 class GateWay;
 
-class TcpSocket
+class TcpSocket : public QTcpSocket
 {
     Q_OBJECT
+public:
+    enum AppState{
+        AppNotStart,
+        AppStarting,
+        AppStarted
+    };
 
 public:
     explicit TcpSocket(GateWay *parent = 0);
@@ -19,6 +25,10 @@ public:
 
     void CheckConnect();
 
+    void Start();
+
+    void Test();
+    void TestAck(ushort sta,ushort dev);
     void SendPacket(const NetPacket& np);
     QString GetRemoteIP();
 
@@ -32,7 +42,7 @@ private:
     void SendData(const QByteArray& data);
     void SendDataIn();
     void CheckReceive();
-//    void TimerOut();
+    void TimerOut();
 signals:
     void PacketReceived(const NetPacket& np,int index);
     void Closed(int index);
@@ -44,7 +54,6 @@ private slots:
     void SlotDisconnected();
     void SlotBytesWritten(qint64);
 private:
-    QTcpSocket *socket;
     QString m_remoteIP;
     ushort m_remotePort;
     QDateTime m_lastConnectTime;

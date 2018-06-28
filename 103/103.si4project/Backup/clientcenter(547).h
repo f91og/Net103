@@ -2,7 +2,6 @@
 #define CLIENTCENTER_H
 
 #include <QObject>
-#include <QTcpServer>
 #include "gateway.h"
 #include "device.h"
 
@@ -22,19 +21,23 @@ public:
     explicit ClientCenter(QObject *parent = 0);
     ushort GetRemotePort();
     void SetDeviceList(const QVariantList& list);
+    void SetLocalAddr(ushort addr);
+    ushort GetLocalAddr();
 
     Device* GetDevice(ushort sta,ushort dev);
 
     void SendAppData(ushort sta,ushort dev, const QByteArray& data);
 
+    bool IsLongNumber();
 protected:
     void timerEvent(QTimerEvent *);
     void Clear();
 private:
-    QTcpServer* server;
     ushort m_remotePort;
+    bool m_longNumber;
     QList<GateWay*> m_lstGateWay;
     QList<Device*> m_lstDevice;
+    ushort m_localAddr;
     QMap<quint32,Device*> m_mapDevice;
 };
 

@@ -6,7 +6,7 @@ ClientCenter::ClientCenter(QObject *parent) :
 {
     QSettings setting("../etc/p103.ini",QSettings::IniFormat);
     setting.beginGroup("p103");
-    m_remotePort = setting.value("port",1032).toUInt();
+    m_remotePort = setting.value("port",6000).toUInt();
     m_longNumber = setting.value("long_number",0).toUInt()!=0;
     if(m_longNumber){
         qDebug()<<"使用长报文编号。";
@@ -15,8 +15,7 @@ ClientCenter::ClientCenter(QObject *parent) :
         qDebug()<<"使用短报文编号。";
     }
     setting.endGroup();
-	server = new QTcpServer();
-    server->listen(QHostAddress::Any, 1048);
+    m_localAddr= 0xfe01;
     startTimer(1000);
 }
 
