@@ -12,5 +12,9 @@
 2. ip地址 2，3字节的问题
 3. 链路层要改的比较多，相当于删除重写
 4. 录波部分要替换
+5. 关于qtcpsocket的问题
+
+SlotReadReady()
+tcp 中的 PacketReceived信号
 
 
