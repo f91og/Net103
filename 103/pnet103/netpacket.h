@@ -16,8 +16,7 @@ public:
     void AddAppData(const QByteArray& data);
     QByteArray GetAppData()const;
 public:
-    ushort dev_ip;
-    ushort dev_cpu;
+    ushort dev_addr;
     QByteArray m_data;
 };
 

@@ -23,19 +23,17 @@ ushort NetPacket::GetLength() const
 
 void NetPacket::SetDestAddr(ushort sta,ushort dev)
 {
-    dev_ip = sta;
-    dev_cpu=dev;
+    dev_addr=dev;
 }
 
 void NetPacket::GetDestAddr(ushort& sta,ushort& dev) const
 {
-    sta = dev_ip;
-    dev = dev_cpu;
+    dev=dev_addr;
 }
 
 void NetPacket::AddAppData(const QByteArray& data)
 {
-    m_data+=data;
+    m_data=data;
     SetLength(GetLength()+data.count());
 }
 

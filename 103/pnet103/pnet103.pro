@@ -1,4 +1,4 @@
-include( $(VISMON_SRC)/lib.pri )
+include( $(IMOON_SRC)/lib.pri )
 TARGET = pnet103
 DEFINES+= PNET103_DLL
 QT += network

@@ -27,6 +27,8 @@ public:
 
     void SendAppData(ushort sta,ushort dev, const QByteArray& data);
 
+    QTcpServer* GetTcpServer();
+
 protected:
     void timerEvent(QTimerEvent *);
     void Clear();

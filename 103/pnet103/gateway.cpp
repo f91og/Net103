@@ -65,25 +65,12 @@ void GateWay::OnTime()
 
 void GateWay::SendAppData(const NetPacket& np)
 {
-    ushort sendNumber = m_sendNumber;
-    if(CanSend(sendNumber)){
-        SendIPacket(np);
-    }
-    else{
-        m_lstIPacketSend.append(np);
-    }
+    SendPacket(np);
 }
 
 void GateWay::SendIPacket(const NetPacket& np)
 {
-    NetPacket nps=np;
-    nps.SetNumber(1,m_recvNumber);
-    nps.SetNumber(0,m_sendNumber);
-    //qDebug()<<"报文发送编号:"<<m_sendNumber;
-    m_ackSendNumber = m_recvNumber;
-    m_sendAckTime = QDateTime();
-    IncNumber(m_sendNumber);
-    SendPacket(nps);
+    SendPacket(np);
 }
 
 void GateWay::Init(ushort sta,ushort dev,const QStringList& ips)
@@ -101,7 +88,6 @@ void GateWay::Init(ushort sta,ushort dev,const QStringList& ips)
                 SIGNAL(PacketReceived(NetPacket,int)),
                 this,
                 SLOT(PacketReceived(NetPacket,int))
-                //Qt::QueuedConnection
                 );
         connect(tcp,
                 SIGNAL(Closed(int)),
@@ -109,7 +95,7 @@ void GateWay::Init(ushort sta,ushort dev,const QStringList& ips)
                 SLOT(Closed(int))
                 );
         tcp->CheckConnect();
-        connect(m_clientCenter->server,&QTcpServer::newConnection,tcp,SLOT(SlotConnected());
+//        connect(GetCenter()->GetTcpServer(),&QTcpServer::newConnection,tcp,&TcpSocket::SlotConnected);
         m_lstSocket.append(tcp);
     }
 }
@@ -125,9 +111,17 @@ void GateWay::PacketReceived(const NetPacket &np, int index)
     PNet103App::GetInstance()
             ->EmitRecvASDU(sta,dev,data);
     //下面是要改的，因为地址不一样
-//    if(sta != 0xff && dev!=0xffff ){
-//        d = m_clientCenter->GetDevice(sta,dev);
-//        d->AddGateWay(this);
-//        d->NetState(index,true);
-//    }
+    if(sta != 0xff && dev!=0xffff ){
+        d = m_clientCenter->GetDevice(sta,dev);
+        d->AddGateWay(this);
+        d->NetState(index,true);
+    }
+}
+
+void GateWay::Closed(int index)
+{
+    Q_UNUSED(index);
+    if(!HasConnect()){
+  //      InitNumber();
+    }
 }

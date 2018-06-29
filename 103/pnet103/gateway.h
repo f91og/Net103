@@ -34,27 +34,12 @@ public:
     void SendAppData(const NetPacket& np);
     void OnTime();
 
-    bool LessThan(ushort num1,ushort num2);
-    void IncNumber(ushort& num);
-
     QString GetAddrString();
-
-    ushort GetMaxNumber();
 private:
     void SendIPacket(const NetPacket &np);
     void InitNumber();
     void AckRecv(ushort num);
     bool IsNumberValid(ushort num);
-
-    bool CanSend(ushort num);
-
-    void CheckSend();
-
-    void SendAck();
-
-    bool AcceptRecv(ushort num);
-
-    void CheckAckRecv();
 private slots:
     void PacketReceived(const NetPacket& np,int index);
     void Closed(int index);
@@ -66,17 +51,7 @@ private:
     ushort m_remotePort;
     ClientCenter* m_clientCenter;
     QList<Device*> m_lstDevice;
-
-    ushort m_recvNumber;
-    ushort m_sendNumber;
-    bool m_clearNumber;
-    ushort m_ackNumber;
-    ushort m_ackSendNumber;
-    QDateTime m_sendAckTime;
-    QDateTime m_recvAckTime;
     QList<NetPacket> m_lstIPacketSend;
-
-    int m_packetNotAck;
 };
 
 #endif // GATEWAY_H

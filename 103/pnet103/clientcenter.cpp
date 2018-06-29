@@ -7,17 +7,10 @@ ClientCenter::ClientCenter(QObject *parent) :
     QSettings setting("../etc/p103.ini",QSettings::IniFormat);
     setting.beginGroup("p103");
     m_remotePort = setting.value("port",1032).toUInt();
-    m_longNumber = setting.value("long_number",0).toUInt()!=0;
-    if(m_longNumber){
-        qDebug()<<"使用长报文编号。";
-    }
-    else{
-        qDebug()<<"使用短报文编号。";
-    }
     setting.endGroup();
-	server = new QTcpServer();
-    server->listen(QHostAddress::Any, 1048);
+    server = new QTcpServer(this);
     startTimer(1000);
+    server->listen(QHostAddress::Any, 1048);
 }
 
 ushort ClientCenter::GetRemotePort()
@@ -25,19 +18,9 @@ ushort ClientCenter::GetRemotePort()
     return m_remotePort;
 }
 
-void ClientCenter::SetLocalAddr(ushort addr)
+QTcpServer* ClientCenter::GetTcpServer()
 {
-    m_localAddr=addr;
-}
-
-ushort ClientCenter::GetLocalAddr()
-{
-    return m_localAddr;
-}
-
-bool ClientCenter::IsLongNumber()
-{
-    return m_longNumber;
+    return server;
 }
 
 void ClientCenter::SendAppData(ushort sta,ushort dev, const QByteArray& data)
@@ -104,10 +87,10 @@ void ClientCenter::SetDeviceList(const QVariantList& list)
 
 void ClientCenter::timerEvent(QTimerEvent *)
 {
-    foreach (GateWay* g, m_lstGateWay) {
-        g->OnTime();
-    }
-    foreach (Device* d, m_lstDevice) {
-        d->OnTimer();
-    }
+//    foreach (GateWay* g, m_lstGateWay) {
+//        g->OnTime();
+//    }
+//    foreach (Device* d, m_lstDevice) {
+//        d->OnTimer();
+//    }
 }

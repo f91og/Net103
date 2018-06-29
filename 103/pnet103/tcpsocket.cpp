@@ -8,36 +8,36 @@
 #include "tool/toolapi.h"
 #include "comm/promonitorapp.h"
 
-TcpSocket::TcpSocket(GateWay *parent)
-    :QTcpSocket(parent)
+TcpSocket::TcpSocket(GateWay *parent):
+    QObject(parent)
 {
     m_appState=AppNotStart;
     m_gateWay = parent;
     m_waitRecv=false;
     m_waitTime=0;
     m_index=0;
-    connect(this->socket,
-            SIGNAL(readChannelFinished()),
-            this,
-            SLOT(SlotReadChannelFinished())
-            );
-    connect(this->socket,
-            SIGNAL(readyRead()),
-            this,
-            SLOT(SlotReadReady())
-            );
-    connect(this->socket,
+//    connect(this->socket,
+//            SIGNAL(readChannelFinished()),
+//            this,
+//            SLOT(SlotReadChannelFinished())
+//            );
+//    connect(this->socket,
+//            SIGNAL(readyRead()),
+//            this,
+//            SLOT(SlotReadReady())
+//            );
+    connect(socket,
             SIGNAL(disconnected()),
             this,
             SLOT(SlotDisconnected())
             );
-    connect(this->socket,
+    connect(socket,
             SIGNAL(error(QAbstractSocket::SocketError)),
             this,
             SLOT(SlotError(QAbstractSocket::SocketError))
             );
 
-    connect(this->socket,
+    connect(socket,
             SIGNAL(bytesWritten(qint64)),
             this,
             SLOT(SlotBytesWritten(qint64))
@@ -53,16 +53,10 @@ void TcpSocket::Init(const QString& ip, ushort port, int index)
 
 void TcpSocket::CheckConnect()
 {
-    if(this->socket->state() != QTcpSocket::UnconnectedState){
+    if(socket->state() != QTcpSocket::UnconnectedState){
         return;
     }
     QDateTime now = QDateTime::currentDateTime();
-    if(m_lastConnectTime.isValid() ){
-        if(m_lastConnectTime.secsTo(now)<10){
-            return;
-        }
-    }
-
     //发点对点广播
 	QUdpSocket *m_pUdpSocket = new QUdpSocket();
 	uchar con_packet[41];
@@ -70,14 +64,14 @@ void TcpSocket::CheckConnect()
     con_packet[0]=0xFF;
     con_packet[1]=1;
     struct TIME_S
-        {
-            WORD	ms;
-            BYTE	min;
-            BYTE	hour;
-            BYTE	day;
-            BYTE	month;
-            BYTE	year;
-        }Time;
+    {
+        ushort	ms;
+        uchar	min;
+        uchar	hour;
+        uchar	day;
+        uchar	month;
+        uchar	year;
+    }Time;
     Time.year	= (uchar)now.date().year()-2000;
     Time.month	= (uchar)now.date().month();
     Time.day	= (uchar)now.date().day();
@@ -94,11 +88,17 @@ void TcpSocket::CheckConnect()
                          MsgInfo,
                          m_remoteIP,
                          QString("正在连接。。。"));
+    while(1)
+    {
+        if(m_gateWay->GetCenter()->){
+            socket=
+        }
+    }
 }
 
 void TcpSocket::SendPacket(const NetPacket &np)
 {
-    if(socket->state()!= ConnectedState){
+    if(socket->state()!= QTcpSocket::ConnectedState){
         return;
     }
     SendData(np.m_data);
@@ -107,7 +107,7 @@ void TcpSocket::SendPacket(const NetPacket &np)
 
 void TcpSocket::SendData(const QByteArray& data)
 {
-    if(socket->state()!= ConnectedState){
+    if(socket->state()!= QTcpSocket::ConnectedState){
         return;
     }
 //    m_sendData+=data;
@@ -153,7 +153,7 @@ void TcpSocket::CheckReceive()
                              m_recvData);
 
         NetPacket np(m_recvData);
-        np.SetDestAddr(socket->peerAddress().toString(),m_recvData[3]);
+        //np.SetDestAddr(socket->peerAddress().toString(),m_recvData[3]);
         emit PacketReceived(np,m_index);
         StartWait(IDEL_WAIT_T3);
     }
@@ -184,7 +184,7 @@ void TcpSocket::SlotReadReady()
     QByteArray data = socket->readAll();
     m_recvData=data;
     if(data.isEmpty()){
-        break;
+        return;
     }
     CheckReceive();
 }
@@ -197,19 +197,19 @@ void TcpSocket::SlotError(QAbstractSocket::SocketError socketError)
                          MsgError,
                          m_remoteIP,
                          QString("链路发生错误:%1")
-                         .arg(this->errorString()));
+                         .arg(this->socket->errorString()));
     Close();
 }
 
 void TcpSocket::SlotConnected()
 {
-    this->socket=m_gateWay->m_clientCenter->server->nextPendingConnection();
+    socket=m_gateWay->GetCenter()->GetTcpServer()->nextPendingConnection();
     ProMonitorApp::GetInstance()
             ->AddMonitor(ProNetLink103,
                          MsgInfo,
                          m_remoteIP,
                          QString("连接成功。"));
-//    m_appState = AppStarting;
+    m_appState = AppStarting;
 }
 
 void TcpSocket::SlotReadChannelFinished()
@@ -251,7 +251,7 @@ void TcpSocket::Close()
     m_sendData.clear();
     m_waitRecv=false;
     m_waitTime=0;
-    if(isOpen()){
+    if(socket->isOpen()){
         socket->close();
         emit Closed(m_index);
     }

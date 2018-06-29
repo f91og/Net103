@@ -8,9 +8,15 @@
 
 class GateWay;
 
-class TcpSocket
+class TcpSocket: public QObject
 {
     Q_OBJECT
+public:
+    enum AppState{
+        AppNotStart,
+        AppStarting,
+        AppStarted
+    };
 
 public:
     explicit TcpSocket(GateWay *parent = 0);
@@ -36,14 +42,14 @@ private:
 signals:
     void PacketReceived(const NetPacket& np,int index);
     void Closed(int index);
-private slots:
+public slots:
     void SlotReadReady();
     void SlotError(QAbstractSocket::SocketError socketError);
     void SlotConnected();
     void SlotReadChannelFinished();
     void SlotDisconnected();
     void SlotBytesWritten(qint64);
-private:
+public:
     QTcpSocket *socket;
     QString m_remoteIP;
     ushort m_remotePort;

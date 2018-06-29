@@ -57,5 +57,5 @@ void PNet103App::SendAppData(ushort sta, ushort dev, const QByteArray &data)
 
 void PNet103App::SetLocalAddr(ushort addr)
 {
-    d->m_clientCenter->SetLocalAddr(addr);
+//    d->m_clientCenter->SetLocalAddr(addr);
 }

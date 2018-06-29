@@ -44,8 +44,6 @@ void Device::OnTimer()
 void Device::SendAppData(const QByteArray& data)
 {
     NetPacket np;
-    np.SetType(NetPacket::Packet_I);
-    np.SetSourceAddr(0,m_clientCenter->GetLocalAddr());
     np.SetDestAddr(m_stationAddr,m_devAddr);
     np.AddAppData(data);
     foreach (GateWay* g, m_lstGateWay) {
@@ -56,14 +54,14 @@ void Device::SendAppData(const QByteArray& data)
 void Device::Test(int index)
 {
     //qDebug()<<"测试:"<<m_devAddr;
-    NetPacket np;
-    np.SetUType(NetPacket::U_Test_Enable);
-    np.SetSourceAddr(0,m_clientCenter->GetLocalAddr());
-    np.SetDestAddr(m_stationAddr,m_devAddr);
+//    NetPacket np;
+//    np.SetUType(NetPacket::U_Test_Enable);
+//    np.SetSourceAddr(0,m_clientCenter->GetLocalAddr());
+//    np.SetDestAddr(m_stationAddr,m_devAddr);
 
-    foreach (GateWay* g, m_lstGateWay) {
-        g->SendPacket(np,index);
-    }
+//    foreach (GateWay* g, m_lstGateWay) {
+//        g->SendPacket(np,index);
+//    }
 }
 
 void Device::OnTimer(int index)
