@@ -53,15 +53,12 @@ void Device::SendAppData(const QByteArray& data)
 
 void Device::Test(int index)
 {
-    //qDebug()<<"测试:"<<m_devAddr;
-//    NetPacket np;
-//    np.SetUType(NetPacket::U_Test_Enable);
-//    np.SetSourceAddr(0,m_clientCenter->GetLocalAddr());
-//    np.SetDestAddr(m_stationAddr,m_devAddr);
+    NetPacket np;
+    np.SetDestAddr(m_stationAddr,m_devAddr);
 
-//    foreach (GateWay* g, m_lstGateWay) {
-//        g->SendPacket(np,index);
-//    }
+    foreach (GateWay* g, m_lstGateWay) {
+        g->SendPacket(np,index);
+    }
 }
 
 void Device::OnTimer(int index)
@@ -86,13 +83,11 @@ void Device::OnTimer(int index)
 
 void Device::NetState(int index, bool conn)
 {
+    qDebug()<<"netstat"<<m_stationAddr<<"stat"<<m_devAddr;
     if(index!=0){
         index=1;
     }
-    if(conn){
-        m_testTimer[index] = DEVICE_TEST_TIME_T2;
-        m_testTimes[index] = DEVICE_TEST_TIMES;
-    }
+
     if(m_state[index]!=conn){
         PNet103App::GetInstance()
             ->EmitNetStateChange(m_stationAddr,

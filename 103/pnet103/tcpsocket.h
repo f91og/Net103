@@ -24,6 +24,7 @@ public:
               int index);
 
     void CheckConnect();
+    void TimerOut();
 
     void SendPacket(const NetPacket& np);
     QString GetRemoteIP();
@@ -49,7 +50,7 @@ public slots:
     void SlotReadChannelFinished();
     void SlotDisconnected();
     void SlotBytesWritten(qint64);
-public:
+private:
     QTcpSocket *socket;
     QString m_remoteIP;
     ushort m_remotePort;

@@ -51,10 +51,12 @@ Pro103AppPrivate::Pro103AppPrivate(QObject *parent) :
     m_periodGeneral=st.value("general",600).toUInt();
     m_periodPulse=st.value("pulse",60).toUInt();
     m_periodRelayMeasure=st.value("relay_measure",5).toUInt();
+    m_periodSync = st.value("sync_period",307).toInt();
     st.endGroup();
     qDebug()<<"总查询周期："<<m_periodGeneral
             <<"遥脉查询周期："<<m_periodPulse
-            <<"保护遥测查询周期"<<m_periodRelayMeasure;
+            <<"保护遥测查询周期"<<m_periodRelayMeasure
+            <<"对时周期："<<m_periodSync;
 
     QList<DbObjectPtr> list = DbSession::GetInstance()
             ->Query(dbc_Pro103Setting::_class_name);
@@ -109,6 +111,7 @@ void Pro103AppPrivate::timerEvent(QTimerEvent *)
 
 void Pro103AppPrivate::SlotNetStateChange(ushort sta,ushort dev,uchar net, uchar state)
 {
+    qDebug()<<"SlotNetStateChange"<<"sta"<<sta<<"dev"<<dev<<"net"<<net<<"state"<<state;
     EDevice* d = FindDevice(sta,dev);
     if(d){
         d->NetState(net,state);

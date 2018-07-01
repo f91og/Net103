@@ -7,7 +7,6 @@ class NetPacket
 public:
     NetPacket();
     NetPacket(const QByteArray& ba);
-    void SetLength(ushort len);
     ushort GetLength()const;
 
     void SetDestAddr(ushort sta,ushort dev);

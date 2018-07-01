@@ -9,8 +9,8 @@ ClientCenter::ClientCenter(QObject *parent) :
     m_remotePort = setting.value("port",1032).toUInt();
     setting.endGroup();
     server = new QTcpServer(this);
-    startTimer(1000);
     server->listen(QHostAddress::Any, 1048);
+    startTimer(30000);
 }
 
 ushort ClientCenter::GetRemotePort()
@@ -25,10 +25,12 @@ QTcpServer* ClientCenter::GetTcpServer()
 
 void ClientCenter::SendAppData(ushort sta,ushort dev, const QByteArray& data)
 {
+    qDebug()<<"SendAppData===============";
     foreach (Device* d, m_lstDevice) {
         if( (sta==0xff || sta == d->m_stationAddr ) &&
                 (dev==0xffff || dev == d->m_devAddr ) ){
             d->SendAppData(data);
+            qDebug()<<"SendAppData11111==============="<<data;
         }
     }
 }
@@ -87,9 +89,9 @@ void ClientCenter::SetDeviceList(const QVariantList& list)
 
 void ClientCenter::timerEvent(QTimerEvent *)
 {
-//    foreach (GateWay* g, m_lstGateWay) {
-//        g->OnTime();
-//    }
+    foreach (GateWay* g, m_lstGateWay) {
+        g->OnTime();
+    }
 //    foreach (Device* d, m_lstDevice) {
 //        d->OnTimer();
 //    }

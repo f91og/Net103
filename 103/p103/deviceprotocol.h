@@ -66,6 +66,7 @@ public:
     void SendAsdu10(const QByteArray& data);
 
     void SendAsdu(const QByteArray& data);
+    void SendAsduTimeSync(void);
 private:
     //分析asdu
     void HandleASDU5(const QByteArray& data);
@@ -93,6 +94,7 @@ private:
     QDateTime m_generalQueryTime;
     QDateTime m_readPulseTime;
     QDateTime m_readRelayMesureTime;
+    QDateTime m_readSyncTime;//for sync time dengby 20160926
 
     QMap<QString,DataType> m_mapDataType;
 };

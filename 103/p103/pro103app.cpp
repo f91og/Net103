@@ -31,17 +31,20 @@ bool Pro103App::Start()
 
 void Pro103App::ReadSetting(quint64 devid,SettingType st,bool edit)
 {
-    //qDebug()<<"开始读取定值...";
+    qDebug()<<"开始读取定值...";
     Q_UNUSED(edit);
     EDevice* d = g_103p->FindDevice(devid);
     if(!d){
+        qDebug()<<"装置不存在。...";
         EmitSettingResult(devid,false,"规约:装置不存在。");
         return;
     }
     if(!d->HasConnected()){
+        qDebug()<<"通信中断。...";
         EmitSettingResult(devid,false,"规约:通信中断。");
         return;
     }
+    qDebug()<<"ReadSetting...";
     d->ReadSetting(st);
 }
 

@@ -16,32 +16,34 @@ TcpSocket::TcpSocket(GateWay *parent):
     m_waitRecv=false;
     m_waitTime=0;
     m_index=0;
-//    connect(this->socket,
+    socket=new QTcpSocket();
+
+//    connect(socket,
 //            SIGNAL(readChannelFinished()),
 //            this,
 //            SLOT(SlotReadChannelFinished())
 //            );
-//    connect(this->socket,
+//    connect(socket,
 //            SIGNAL(readyRead()),
 //            this,
 //            SLOT(SlotReadReady())
 //            );
-    connect(socket,
-            SIGNAL(disconnected()),
-            this,
-            SLOT(SlotDisconnected())
-            );
-    connect(socket,
-            SIGNAL(error(QAbstractSocket::SocketError)),
-            this,
-            SLOT(SlotError(QAbstractSocket::SocketError))
-            );
+//    connect(socket,
+//            SIGNAL(disconnected()),
+//            this,
+//            SLOT(SlotDisconnected())
+//            );
+//    connect(socket,
+//            SIGNAL(error(QAbstractSocket::SocketError)),
+//            this,
+//            SLOT(SlotError(QAbstractSocket::SocketError))
+//            );
 
-    connect(socket,
-            SIGNAL(bytesWritten(qint64)),
-            this,
-            SLOT(SlotBytesWritten(qint64))
-            );
+//    connect(socket,
+//            SIGNAL(bytesWritten(qint64)),
+//            this,
+//            SLOT(SlotBytesWritten(qint64))
+//            );
 }
 
 void TcpSocket::Init(const QString& ip, ushort port, int index)
@@ -53,9 +55,10 @@ void TcpSocket::Init(const QString& ip, ushort port, int index)
 
 void TcpSocket::CheckConnect()
 {
-    if(socket->state() != QTcpSocket::UnconnectedState){
+    if(socket->state()!=QAbstractSocket::UnconnectedState){
         return;
     }
+
     QDateTime now = QDateTime::currentDateTime();
     //发点对点广播
 	QUdpSocket *m_pUdpSocket = new QUdpSocket();
@@ -83,17 +86,33 @@ void TcpSocket::CheckConnect()
     ha.setAddress(m_remoteIP);
 	m_pUdpSocket->writeDatagram((char*)con_packet,41,ha,1032);
     m_lastConnectTime = now;
-    ProMonitorApp::GetInstance()
-            ->AddMonitor(ProNetLink103,
-                         MsgInfo,
-                         m_remoteIP,
-                         QString("正在连接。。。"));
-    while(1)
-    {
-        if(m_gateWay->GetCenter()->){
-            socket=
-        }
+    QTcpServer* server=m_gateWay->GetCenter()->GetTcpServer();
+    while(1){
+        if(!server->waitForNewConnection(-1)) break;
+        socket=server->nextPendingConnection();
+        m_appState = AppStarting;
+        qDebug()<<"Debug>>成功连接子站......";
+        qDebug()<<socket->peerAddress().toString();
+        connect(socket,&QTcpSocket::readyRead,this,&TcpSocket::SlotReadReady);
+        connect(socket,&QTcpSocket::readChannelFinished,this,&TcpSocket::SlotReadChannelFinished);
+        connect(socket,&QTcpSocket::disconnected,this,&TcpSocket::SlotDisconnected);
+        connect(socket,SIGNAL(error(QAbstractSocket::SocketError)),this,SLOT(SlotError(QAbstractSocket::SocketError)));
+        connect(socket,SIGNAL(bytesWritten(qint64)),this,SLOT(SlotBytesWritten(qint64)));
+        break;
     }
+}
+
+void TcpSocket::TimerOut()
+{
+    if(socket->state()!=QAbstractSocket::ConnectedState){
+        return;
+    }
+    qDebug()<<"发送心跳报文";
+    QByteArray data;
+    data.resize(9);
+    data.fill(0);//暂且不对时
+    data[0]=0x88;
+ //   SendData(data);
 }
 
 void TcpSocket::SendPacket(const NetPacket &np)
@@ -102,7 +121,6 @@ void TcpSocket::SendPacket(const NetPacket &np)
         return;
     }
     SendData(np.m_data);
-    StartWait(IDEL_WAIT_T3);
 }
 
 void TcpSocket::SendData(const QByteArray& data)
@@ -110,7 +128,7 @@ void TcpSocket::SendData(const QByteArray& data)
     if(socket->state()!= QTcpSocket::ConnectedState){
         return;
     }
-//    m_sendData+=data;
+    m_sendData.clear();
     m_sendData=data;
     SendDataIn();
     ProMonitorApp::GetInstance()
@@ -123,6 +141,7 @@ void TcpSocket::SendData(const QByteArray& data)
 
 void TcpSocket::CheckReceive()
 {
+    qDebug()<<"收到的报文长度："<<m_recvData.length();
      if(m_recvData.length()>=6){
         ushort len = m_recvData.size();
         if(len>1015){
@@ -152,6 +171,7 @@ void TcpSocket::CheckReceive()
                              QString(),
                              m_recvData);
 
+//        //暂时不
         NetPacket np(m_recvData);
         //np.SetDestAddr(socket->peerAddress().toString(),m_recvData[3]);
         emit PacketReceived(np,m_index);
@@ -165,13 +185,13 @@ void TcpSocket::SendDataIn()
         return;
     }
     int ret = socket->write(m_sendData);
-    socket->flush();
+//    socket->flush();
     if(ret<0){
         qDebug()<<"发送错误:"<<m_remoteIP;
         Close();
         return;
     }
-//    m_sendData = m_sendData.mid(ret);
+    m_sendData = m_sendData.mid(ret);
 }
 
 QString TcpSocket::GetRemoteIP()
@@ -183,6 +203,7 @@ void TcpSocket::SlotReadReady()
 {
     QByteArray data = socket->readAll();
     m_recvData=data;
+    qDebug()<<"receive:"<<m_recvData.toHex();
     if(data.isEmpty()){
         return;
     }
@@ -199,11 +220,12 @@ void TcpSocket::SlotError(QAbstractSocket::SocketError socketError)
                          QString("链路发生错误:%1")
                          .arg(this->socket->errorString()));
     Close();
+    CheckConnect();
+
 }
 
 void TcpSocket::SlotConnected()
 {
-    socket=m_gateWay->GetCenter()->GetTcpServer()->nextPendingConnection();
     ProMonitorApp::GetInstance()
             ->AddMonitor(ProNetLink103,
                          MsgInfo,
@@ -221,6 +243,7 @@ void TcpSocket::SlotReadChannelFinished()
                          QString("读通道被关闭")
                          );
     Close();
+    CheckConnect();
 }
 
 void TcpSocket::StartWait(int s)
@@ -231,7 +254,7 @@ void TcpSocket::StartWait(int s)
 void TcpSocket::OnTimer()
 {
     CheckConnect();
-//    TimerOut();
+    TimerOut();//在这个方法里发心跳报文以维持连接
 }
 
 int TcpSocket::GetIndex()

@@ -92,7 +92,7 @@ void ReadCatalogueCommand::RecvData(const QByteArray &data, uchar cot)
         QByteArray name_c(wDataSize,0);
         memcpy(name_c.data(), &pData[GENDATAREC_GID], wDataSize);
         QString strName = g_103p->m_gbk->toUnicode(name_c);
-        int groupType = JudgGroupType(strName);
+        int groupType = JudgGroupType(pData[GENDATAREC_GIN]);
         if(groupType==RETERROR){
             qDebug()<<"组名:"<<strName<<"无效";
             continue;
@@ -126,32 +126,32 @@ void ReadCatalogueCommand::TimerOut()
     }
 }
 
-int ReadCatalogueCommand::JudgGroupType(const QString& strName)
+int ReadCatalogueCommand::JudgGroupType(const uchar& group)
 {
-    if(strName == "装置描述") return enumGroupTypeDevDescription;
-    else if(strName == "装置参数") return enumGroupTypeDevParam;
-    else if(strName == "定值区号") return enumGroupTypeSettingArea;
-    else if(strName.indexOf("定值") != -1) return enumGroupTypeSetting;
-    else if(strName.indexOf("动作元件") != -1) return enumGroupTypeActElement;
-    else if(strName.indexOf("装置自检") != -1) return enumGroupTypeDevCheckSelf;
-    else if(strName.indexOf("运行告警") != -1)return enumGroupTypeRunWarn;
-    else if(strName.indexOf("软压板") != -1) return enumGroupTypeSoftSwitch;
-    else if(strName.indexOf("硬压板") != -1) return enumGroupTypeHardSwitch;
-    else if(strName.indexOf("遥信") != -1) return enumGroupTypeYX;
-    else if(strName.indexOf("测量") != -1) return enumGroupTypeRelayMeasure;
-    else if(strName.indexOf("遥测") != -1)
+    if(group == 0) return enumGroupTypeDevDescription;
+    else if(group == 0x01) return enumGroupTypeDevParam;
+    else if(group == 0x02) return enumGroupTypeSettingArea;
+    else if(group == 0x03) return enumGroupTypeSetting;
+    else if(group == 0x04) return enumGroupTypeActElement;
+    else if(group == 0x05) return enumGroupTypeDevCheckSelf;
+    else if(group == 0x05)return enumGroupTypeRunWarn;
+    else if(group == 0x01) return enumGroupTypeSoftSwitch;
+    else if(group == 0x01) return enumGroupTypeHardSwitch;
+    else if((group == 0x08)||(group == 0x09)) return enumGroupTypeYX;
+    else if(group == 0x06) return enumGroupTypeRelayMeasure;
+    else if(group == 0x07)
         return enumGroupTypeYC;
-    else if(strName == "遥脉") return enumGroupTypeYM;
-    else if(strName.indexOf("遥控") != -1) return enumGroupTypeYK;
-    else if(strName == "遥调") return enumGroupTypeYT;
-    else if(strName == "档位") return enumGroupTypeTapPos;
-    else if(strName == "故障信息") return enumGroupTypeFaultInf;
-    else if(strName.indexOf("扰动数据说明") != -1) return enumGroupTypeDtbInf;
-    else if(strName == "设置信息") return enumGroupTypeSetInf;
-    else if(strName == "操作信息") return enumGroupTypeOpInf;
-    else if(strName == "顺控操作信息") return enumGroupTypeSCOPInf;
-    else if(strName == "接地选线数据") return enumGroupTypeRelayJD;
-    else if(strName == "接地试跳") return enumGroupTypeRelayJDST;
+    else if(group == 0x0a) return enumGroupTypeYM;
+    else if(group == 0x0b) return enumGroupTypeYK;
+    else if(group == 0x01) return enumGroupTypeYT;
+    else if(group == 0x01) return enumGroupTypeTapPos;
+    else if(group == 0x01) return enumGroupTypeFaultInf;
+    else if(group == 0x01) return enumGroupTypeDtbInf;
+    else if(group == 0x01) return enumGroupTypeSetInf;
+    else if(group == 0x01) return enumGroupTypeOpInf;
+    else if(group == 0x01) return enumGroupTypeSCOPInf;
+    else if(group == 0x01) return enumGroupTypeRelayJD;
+    else if(group == 0x01) return enumGroupTypeRelayJDST;
     else return RETERROR;
 }
 

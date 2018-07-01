@@ -1,6 +1,6 @@
 #ifndef PRO103APP_H
 #define PRO103APP_H
-#include "comm/probase.h"
+#include "../promgr/probase.h"
 #include "comm/p103.h"
 
 class P103_EXPORT Pro103App : public ProBase

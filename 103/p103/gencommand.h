@@ -36,7 +36,7 @@ public:
     ReadCatalogueCommand(DeviceProtocol *parent = 0);
     virtual void RecvData(const QByteArray& data,uchar cot);
     virtual void DoCommand();
-    static int JudgGroupType(const QString& strName);
+    static int JudgGroupType(const uchar& group);
 public slots:
     virtual void TimerOut();
 public:

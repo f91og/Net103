@@ -54,6 +54,10 @@ void DeviceProtocol::OnTimer()
     if(!m_readRelayMesureTime.isValid() || m_readRelayMesureTime.secsTo(now)>g_103p->m_periodRelayMeasure){
         ReadRelayMeasure();
     }
+
+//    if(!m_readSyncTime.isValid() || m_readSyncTime.secsTo(now)>g_103p->m_periodSync){
+//        SendAsduTimeSync();//test here dengby 170926
+//    }
 }
 
 void DeviceProtocol::ReadCatalog()
@@ -240,18 +244,27 @@ void DeviceProtocol::IncRII()
 void DeviceProtocol::SendGeneralQuery()
 {
     //qDebug()<<"总查询";
-    QByteArray asdu(8,0);
-    asdu[ASDU_TYPE] = (uchar )TYPC_GRC_COMMAND;
-    asdu[ASDU_VSQ] = (uchar )VSQ_COMMON1;
-    asdu[ASDU_COT] = (uchar )COTC_GENQUERY;
-    asdu[ASDU_ADDR] = (uchar )m_device->GetDevAddr();
+//    QByteArray asdu(8,0);
+//    asdu[ASDU_TYPE] = (uchar )TYPC_GRC_COMMAND;
+//    asdu[ASDU_VSQ] = (uchar )VSQ_COMMON1;
+//    asdu[ASDU_COT] = (uchar )COTC_GENQUERY;
+//    asdu[ASDU_ADDR] = (uchar )m_device->GetDevAddr();
 
-    uchar* pDataRec = (uchar* )asdu.data()+4;
-    pDataRec[GENREQCOM_FUN] = 254;
-    pDataRec[GENREQCOM_INF] = 245;
-    pDataRec[GENREQCOM_RII] = GetRIIAndInc();
-    pDataRec[GENREQCOM_NOG] = 1;
+//    uchar* pDataRec = (uchar* )asdu.data()+4;
+//    pDataRec[GENREQCOM_FUN] = 254;
+//    pDataRec[GENREQCOM_INF] = 245;
+//    pDataRec[GENREQCOM_RII] = GetRIIAndInc();
+//    pDataRec[GENREQCOM_NOG] = 1;
 
+    QByteArray asdu;
+    asdu.resize(7);
+    asdu[0]=0x07;
+    asdu[1]=0x81;
+    asdu[2]=0x09;
+    asdu[3]=(uchar)m_device->GetDevAddr();
+    asdu[4]=0xff;
+    asdu[5]=0x00;
+    asdu[6]=0xff;
     SendAsdu(asdu);
 
     ProMonitorApp::GetInstance()
@@ -521,6 +534,57 @@ void DeviceProtocol::RecvGenData(const QByteArray &data, int num, int cot)
         memcpy(ba.data(), pCurRec, wDataSize);
         GenDataHandle(ba,cot);
     }
+}
+
+
+void DeviceProtocol::SendAsduTimeSync(void)
+{
+    QByteArray asdu(4,0);
+    asdu[ASDU_TYPE] = (char) TYPC_TIMESYNC;
+    asdu[ASDU_VSQ] = (char) VSQ_COMMON1;
+    asdu[ASDU_COT] = (char) COTC_TIMESYNC;
+    asdu[ASDU_ADDR] = (uchar)(m_device->GetDevAddr());
+
+    QTime tm = QTime::currentTime();
+    ushort hour = tm.hour();
+    ushort min = tm.minute();
+    ushort ms = tm.msec();
+    ushort seconds = tm.second();
+    seconds *= 1000;
+    ms += seconds;
+    //int ms = 40153;//test
+    ushort ms_h = (ms>>8) & 0xff;
+    ushort ms_l = ms & 0x00ff;
+    QDate date = QDate::currentDate();
+    ushort yr = date.year()%100;
+    ushort mon = date.month();
+    ushort day = date.day();
+    ushort dayOfWeek = date.dayOfWeek();
+    ushort daymonth_wk = (dayOfWeek << 4) | day;
+
+    QByteArray timeDataBody(9,0);
+    int idx = GENDATACOM_FUN;
+    timeDataBody[idx] = 255;
+    idx = GENDATACOM_INF;
+    timeDataBody[idx++] = 0;
+    timeDataBody[idx++] = ms_l;
+    timeDataBody[idx++] = ms_h;
+    //timeDataBody[idx++] = seconds;
+    timeDataBody[idx++] = min;
+    timeDataBody[idx++] = hour;//summer time
+    timeDataBody[idx++] = day;//daymonth_wk;//day of month day of week
+    timeDataBody[idx++] = mon;//
+    timeDataBody[idx++] = yr;//
+
+    asdu += timeDataBody;
+    SendAsdu(asdu);
+    m_readSyncTime = QDateTime::currentDateTime();
+
+    ProMonitorApp::GetInstance()
+            ->AddMonitor(ProIEC103,
+                         MsgInfo,
+                         m_device->GetAddrString(),
+                         "发送对时");
 }
 
 void DeviceProtocol::SendAsdu21(const QByteArray& data)

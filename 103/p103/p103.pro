@@ -1,4 +1,4 @@
-include( $(VISMON_SRC)/lib.pri )
+include( $(IMOON_SRC)/lib.pri )
 TARGET = p103
 DEFINES+= P103_DLL
 LIBS += -lpnet103 -ldboo -ldbmetaapi -lpromgr -lsysapi \

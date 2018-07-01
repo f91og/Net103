@@ -19,12 +19,12 @@ ClientCenter* GateWay::GetCenter()
 
 bool GateWay::HasConnect()
 {
-    foreach (TcpSocket* tcp, m_lstSocket) {
-        if(tcp->socket->state() == QTcpSocket::ConnectedState){
-            return true;
-        }
-    }
-    return false;
+//    foreach (TcpSocket* tcp, m_lstSocket) {
+//        if(tcp->socket->state() == QTcpSocket::ConnectedState){
+//            return true;
+//        }
+//    }
+//    return false;
 }
 
 ushort GateWay::GetStationAddr()
@@ -95,7 +95,6 @@ void GateWay::Init(ushort sta,ushort dev,const QStringList& ips)
                 SLOT(Closed(int))
                 );
         tcp->CheckConnect();
-//        connect(GetCenter()->GetTcpServer(),&QTcpServer::newConnection,tcp,&TcpSocket::SlotConnected);
         m_lstSocket.append(tcp);
     }
 }
@@ -107,6 +106,7 @@ void GateWay::PacketReceived(const NetPacket &np, int index)
     ushort sta ;
     ushort dev;
     np.GetDestAddr(sta,dev);
+    qDebug()<<"sta"<<sta<<"dev"<<dev;
     QByteArray data = np.GetAppData();
     PNet103App::GetInstance()
             ->EmitRecvASDU(sta,dev,data);

@@ -37,6 +37,7 @@ public:
     int m_periodPulse;
     int m_periodGeneral;
     int m_periodRelayMeasure;
+    int m_periodSync;//for sync time dengby 20170926
 
     DbObjectPtr m_setting;
 private:

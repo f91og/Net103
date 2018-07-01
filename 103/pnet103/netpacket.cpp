@@ -11,10 +11,6 @@ NetPacket::NetPacket(const QByteArray& ba)
     m_data=ba;
 }
 
-void NetPacket::SetLength(ushort len)
-{
-    ToolNumberToByte((uchar*)m_data.data()+1,len);
-}
 
 ushort NetPacket::GetLength() const
 {
@@ -28,13 +24,13 @@ void NetPacket::SetDestAddr(ushort sta,ushort dev)
 
 void NetPacket::GetDestAddr(ushort& sta,ushort& dev) const
 {
-    dev=dev_addr;
+    sta=0;
+    dev=171*0x100+01;
 }
 
 void NetPacket::AddAppData(const QByteArray& data)
 {
     m_data=data;
-    SetLength(GetLength()+data.count());
 }
 
 QByteArray NetPacket::GetAppData()const
