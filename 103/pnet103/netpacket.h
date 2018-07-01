@@ -15,6 +15,7 @@ public:
     void AddAppData(const QByteArray& data);
     QByteArray GetAppData()const;
 public:
+    QString m_remoteIP;
     ushort dev_addr;
     QByteArray m_data;
 };

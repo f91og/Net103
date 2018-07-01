@@ -243,19 +243,6 @@ void DeviceProtocol::IncRII()
 
 void DeviceProtocol::SendGeneralQuery()
 {
-    //qDebug()<<"总查询";
-//    QByteArray asdu(8,0);
-//    asdu[ASDU_TYPE] = (uchar )TYPC_GRC_COMMAND;
-//    asdu[ASDU_VSQ] = (uchar )VSQ_COMMON1;
-//    asdu[ASDU_COT] = (uchar )COTC_GENQUERY;
-//    asdu[ASDU_ADDR] = (uchar )m_device->GetDevAddr();
-
-//    uchar* pDataRec = (uchar* )asdu.data()+4;
-//    pDataRec[GENREQCOM_FUN] = 254;
-//    pDataRec[GENREQCOM_INF] = 245;
-//    pDataRec[GENREQCOM_RII] = GetRIIAndInc();
-//    pDataRec[GENREQCOM_NOG] = 1;
-
     QByteArray asdu;
     asdu.resize(7);
     asdu[0]=0x07;

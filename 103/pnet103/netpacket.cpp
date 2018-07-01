@@ -25,7 +25,9 @@ void NetPacket::SetDestAddr(ushort sta,ushort dev)
 void NetPacket::GetDestAddr(ushort& sta,ushort& dev) const
 {
     sta=0;
-    dev=171*0x100+01;
+    QString ip_last=m_remoteIP.section(".",3,3);
+    dev=ip_last.toUShort()*0x100+01;
+//    dev=171*0x100+01;
 }
 
 void NetPacket::AddAppData(const QByteArray& data)

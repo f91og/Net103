@@ -128,30 +128,29 @@ void ReadCatalogueCommand::TimerOut()
 
 int ReadCatalogueCommand::JudgGroupType(const uchar& group)
 {
-    if(group == 0) return enumGroupTypeDevDescription;
-    else if(group == 0x01) return enumGroupTypeDevParam;
-    else if(group == 0x02) return enumGroupTypeSettingArea;
-    else if(group == 0x03) return enumGroupTypeSetting;
-    else if(group == 0x04) return enumGroupTypeActElement;
-    else if(group == 0x05) return enumGroupTypeDevCheckSelf;
-    else if(group == 0x05)return enumGroupTypeRunWarn;
-    else if(group == 0x01) return enumGroupTypeSoftSwitch;
-    else if(group == 0x01) return enumGroupTypeHardSwitch;
-    else if((group == 0x08)||(group == 0x09)) return enumGroupTypeYX;
-    else if(group == 0x06) return enumGroupTypeRelayMeasure;
-    else if(group == 0x07)
-        return enumGroupTypeYC;
-    else if(group == 0x0a) return enumGroupTypeYM;
-    else if(group == 0x0b) return enumGroupTypeYK;
-    else if(group == 0x01) return enumGroupTypeYT;
-    else if(group == 0x01) return enumGroupTypeTapPos;
-    else if(group == 0x01) return enumGroupTypeFaultInf;
-    else if(group == 0x01) return enumGroupTypeDtbInf;
-    else if(group == 0x01) return enumGroupTypeSetInf;
-    else if(group == 0x01) return enumGroupTypeOpInf;
-    else if(group == 0x01) return enumGroupTypeSCOPInf;
-    else if(group == 0x01) return enumGroupTypeRelayJD;
-    else if(group == 0x01) return enumGroupTypeRelayJDST;
+    if(group == 0x40) return enumGroupTypeDevDescription;//装置描述
+    else if(group == 0x40) return enumGroupTypeDevParam;//装置参数
+    else if(group == 0x02) return enumGroupTypeSettingArea;//定值区号,应该是通过组号和条目号来确认的
+    else if(group == 0x03) return enumGroupTypeSetting;//定值
+    else if(group == 0x04) return enumGroupTypeActElement;//动作元件，这个是报告？
+    else if(group == 0x40) return enumGroupTypeDevCheckSelf;//装置自检，找不到
+    else if(group == 0x05)return enumGroupTypeRunWarn;//运行告警
+    else if(group == 0x0e) return enumGroupTypeSoftSwitch;//软压板
+    else if(group == 0x40) return enumGroupTypeHardSwitch;//硬压板,没有硬压板
+    else if((group == 0x08)||(group == 0x09)) return enumGroupTypeYX;//遥信，但是这里有带时标和不带时标的区别
+    else if(group == 0x06) return enumGroupTypeRelayMeasure;//测量
+    else if(group == 0x07) return enumGroupTypeYC;//遥测
+    else if(group == 0x0a) return enumGroupTypeYM;//遥脉
+    else if(group == 0x40) return enumGroupTypeYK;//遥控，这个也找不到对应的组号，遥控开关和遥控分头？
+    else if(group == 0x0d) return enumGroupTypeYT;//遥调
+    else if(group == 0x01) return enumGroupTypeTapPos;//档位，找不到，下面都找不到对应的组号
+    else if(group == 0x01) return enumGroupTypeFaultInf;//故障信息
+    else if(group == 0x01) return enumGroupTypeDtbInf;//扰动数据说明
+    else if(group == 0x01) return enumGroupTypeSetInf;//设置信息
+    else if(group == 0x01) return enumGroupTypeOpInf;//操作信息
+    else if(group == 0x01) return enumGroupTypeSCOPInf;//顺控操作信息
+    else if(group == 0x01) return enumGroupTypeRelayJD;//接地选线数据
+    else if(group == 0x01) return enumGroupTypeRelayJDST;//接地试跳
     else return RETERROR;
 }
 

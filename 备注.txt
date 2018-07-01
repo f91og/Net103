@@ -10,7 +10,7 @@
 
 1. gateway--管理机部分--一个链路连接 多个设备
 2. ip地址 2，3字节的问题
-3. 链路层要改的比较多，相当于删除重写
+3. 关于sta的疑问，在pro103apprivate的start()方法中：DbObjectPtr sta = dev->RelationOne("station");
 4. 录波部分要替换
 5. 关于qtcpsocket的问题
 
