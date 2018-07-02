@@ -154,7 +154,7 @@ void DeviceProtocol::ReadPulse()
     foreach (int no, m_device->GetGroupNo(enumGroupTypeYM)) {
         ReadGroupValueCommand* cmd = new ReadGroupValueCommand(this);
         cmd->Init(no,KOD_ACTUALVALUE);
-        cmd->DoCommand();
+        cmd->DoComzzzzzmand();
     }
     m_readPulseTime = QDateTime::currentDateTime();
 }
@@ -882,6 +882,21 @@ ushort DeviceProtocol::CalcuGrcDataLen(uchar* pgd, ushort wCount)
 
 void DeviceProtocol::HandleASDU10(const QByteArray& data)
 {
+    if(data.size()<6) return;
+    CAsdu a;
+    a.m_ASDUData.resize(0);
+    a.SaveAsdu(data);
+    if(a.a.m_COT==0x01&&a.m_ASDUData.at(2)==0x04)
+    {
+        qDebug()<<"Action Report------>>>";
+
+        return;
+    }
+    ＣＡｓｄｕ a10(a);
+
+
+    return;
+
     if(data.size() <= 4) return;
     ushort wLen = data.size()-4;
     uchar* pData = (uchar*)data.data();

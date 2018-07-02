@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include "gencommand.h"
+#include "asdu.h"
 #include <QPointer>
 #include <QDateTime>
 #include <QMap>

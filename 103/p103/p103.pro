@@ -14,7 +14,8 @@ SOURCES += \
     gencommand.cpp \
     commandhandler.cpp \
     main.cpp \
-    ../../license/licapi/licapp.cpp
+    ../../license/licapi/licapp.cpp \
+    asdu.cpp
 
 HEADERS += \
 			protocol_define.h \
@@ -25,5 +26,7 @@ HEADERS += \
     pro103appprivate.h \
     deviceprotocol.h \
     gencommand.h \
-    commandhandler.h
+    commandhandler.h \
+    103struct.h \
+    asdu.h
 
