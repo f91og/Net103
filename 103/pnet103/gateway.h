@@ -35,6 +35,7 @@ public:
     void OnTime();
 
     QString GetAddrString();
+    void SendUdp(QString ip);
 private:
     void SendIPacket(const NetPacket &np);
     void InitNumber();

@@ -24,8 +24,9 @@ public:
               int index);
 
     void CheckConnect();
+    void SendUdp();
     void TimerOut();
-
+    QTcpSocket* GetTcpSocket();
     void SendPacket(const NetPacket& np);
     QString GetRemoteIP();
 
@@ -34,7 +35,9 @@ public:
     void StartWait(int s);
 
     int GetIndex();
+
     void OnTimer();
+    void timerEvent(QTimerEvent *);
 private:
     void SendData(const QByteArray& data);
     void SendDataIn();

@@ -30,6 +30,15 @@ void NetPacket::GetDestAddr(ushort& sta,ushort& dev) const
 //    dev=171*0x100+01;
 }
 
+void NetPacket::SetRemoteIP(QString ip)
+{
+    m_remoteIP=ip;
+}
+
+void NetPacket::GetRemoteIP(){
+    return m_remoteIP;
+}
+
 void NetPacket::AddAppData(const QByteArray& data)
 {
     m_data=data;

@@ -29,15 +29,21 @@ public:
 
     QTcpServer* GetTcpServer();
 
+    QList<QTcpSocket*> GetSocketList();
+
 protected:
     void timerEvent(QTimerEvent *);
     void Clear();
+
+private slots:
+    server_New_Connect();
 private:
     QTcpServer* server;
     ushort m_remotePort;
     QList<GateWay*> m_lstGateWay;
     QList<Device*> m_lstDevice;
     QMap<quint32,Device*> m_mapDevice;
+    QList<QTcpSocket*> m_socketList;
 };
 
 #endif // CLIENTCENTER_H

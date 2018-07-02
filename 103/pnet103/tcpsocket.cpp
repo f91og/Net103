@@ -1,6 +1,5 @@
 #include "tcpsocket.h"
 #include <QHostAddress>
-#include <QUdpSocket>
 #include "gateway.h"
 #include "netpacket.h"
 #include "clientcenter.h"
@@ -17,33 +16,6 @@ TcpSocket::TcpSocket(GateWay *parent):
     m_waitTime=0;
     m_index=0;
     socket=new QTcpSocket();
-
-//    connect(socket,
-//            SIGNAL(readChannelFinished()),
-//            this,
-//            SLOT(SlotReadChannelFinished())
-//            );
-//    connect(socket,
-//            SIGNAL(readyRead()),
-//            this,
-//            SLOT(SlotReadReady())
-//            );
-//    connect(socket,
-//            SIGNAL(disconnected()),
-//            this,
-//            SLOT(SlotDisconnected())
-//            );
-//    connect(socket,
-//            SIGNAL(error(QAbstractSocket::SocketError)),
-//            this,
-//            SLOT(SlotError(QAbstractSocket::SocketError))
-//            );
-
-//    connect(socket,
-//            SIGNAL(bytesWritten(qint64)),
-//            this,
-//            SLOT(SlotBytesWritten(qint64))
-//            );
 }
 
 void TcpSocket::Init(const QString& ip, ushort port, int index)
@@ -51,60 +23,30 @@ void TcpSocket::Init(const QString& ip, ushort port, int index)
     m_remoteIP=ip;
     m_remotePort=port;
     m_index = index;
+    startTimer(5000);
 }
 
 void TcpSocket::CheckConnect()
 {
-    if(socket->state()!=QAbstractSocket::UnconnectedState){
-        return;
-    }
-
-    QDateTime now = QDateTime::currentDateTime();
-    //发点对点广播
-	QUdpSocket *m_pUdpSocket = new QUdpSocket();
-	uchar con_packet[41];
-	memset(con_packet, 0x00, sizeof(con_packet));
-    con_packet[0]=0xFF;
-    con_packet[1]=1;
-    struct TIME_S
+    QList<QTcpSocket*> sockets=m_gateWay->GetCenter()->GetSocketList();
+    foreach(QTcpSocket* s,sockets)
     {
-        ushort	ms;
-        uchar	min;
-        uchar	hour;
-        uchar	day;
-        uchar	month;
-        uchar	year;
-    }Time;
-    Time.year	= (uchar)now.date().year()-2000;
-    Time.month	= (uchar)now.date().month();
-    Time.day	= (uchar)now.date().day();
-    Time.hour	= (uchar)now.time().hour();
-    Time.min	= (uchar)now.time().minute();
-    Time.ms		= now.time().second()*1000+now.time().msec();
-	memcpy(&con_packet[2], &Time, 7);
-    QHostAddress ha;
-    ha.setAddress(m_remoteIP);
-	m_pUdpSocket->writeDatagram((char*)con_packet,41,ha,1032);
-    m_lastConnectTime = now;
-    QTcpServer* server=m_gateWay->GetCenter()->GetTcpServer();
-    while(1){
-        if(!server->waitForNewConnection(-1)) break;
-        socket=server->nextPendingConnection();
-        m_appState = AppStarting;
-        connect(socket,&QTcpSocket::readyRead,this,&TcpSocket::SlotReadReady);
-//        connect(socket,&QTcpSocket::readChannelFinished,this,&TcpSocket::SlotReadChannelFinished);
-        connect(socket,&QTcpSocket::disconnected,this,&TcpSocket::SlotDisconnected);
-        connect(socket,SIGNAL(error(QAbstractSocket::SocketError)),this,SLOT(SlotError(QAbstractSocket::SocketError)));
-        connect(socket,SIGNAL(bytesWritten(qint64)),this,SLOT(SlotBytesWritten(qint64)));
-        break;
+        QString ip=s->peerAddress().toString();
+        if(m_remoteIP==ip&&s->state()==QTcpSocket::ConnectedState){
+            socket=s;
+            m_appState = AppStarting;
+            connect(socket,&QTcpSocket::readyRead,this,&TcpSocket::SlotReadReady);
+    //        connect(socket,&QTcpSocket::readChannelFinished,this,&TcpSocket::SlotReadChannelFinished);
+            connect(socket,&QTcpSocket::disconnected,this,&TcpSocket::SlotDisconnected);
+            connect(socket,SIGNAL(error(QAbstractSocket::SocketError)),this,SLOT(SlotError(QAbstractSocket::SocketError)));
+            connect(socket,SIGNAL(bytesWritten(qint64)),this,SLOT(SlotBytesWritten(qint64)));
+            break;
+        }
     }
 }
 
 void TcpSocket::TimerOut()
 {
-    if(socket->state()!=QAbstractSocket::ConnectedState){
-        return;
-    }
     qDebug()<<"发送心跳报文";
     QByteArray data;
     data.resize(9);
@@ -118,7 +60,7 @@ void TcpSocket::SendPacket(const NetPacket &np)
     if(socket->state()!= QTcpSocket::ConnectedState){
         return;
     }
-    SendData(np.m_data);
+    SendData(np.GetAppData());
 }
 
 void TcpSocket::SendData(const QByteArray& data)
@@ -172,7 +114,7 @@ void TcpSocket::CheckReceive()
 //        //暂时不
         NetPacket np(m_recvData);
         //np.SetDestAddr(socket->peerAddress().toString(),m_recvData[3]);
-        np.m_remoteIP=m_remoteIP;
+        np.SetRemoteIP(m_remoteIP);
         emit PacketReceived(np,m_index);
         StartWait(IDEL_WAIT_T3);
     }
@@ -196,6 +138,11 @@ void TcpSocket::SendDataIn()
 QString TcpSocket::GetRemoteIP()
 {
     return m_remoteIP;
+}
+
+QTcpSocket* TcpSocket::GetTcpSocket()
+{
+    return socket;
 }
 
 void TcpSocket::SlotReadReady()
@@ -249,8 +196,11 @@ void TcpSocket::StartWait(int s)
 
 void TcpSocket::OnTimer()
 {
-    CheckConnect();
-    TimerOut();//在这个方法里发心跳报文以维持连接
+    if(socket->state()!=QTcpSocket::UnconnectedState){//没有连接检查连接，有连接则发心跳报文
+        CheckConnect();
+    }else{
+        TimerOut();
+    }
 }
 
 int TcpSocket::GetIndex()
@@ -284,10 +234,21 @@ void TcpSocket::SlotDisconnected()
                          m_remoteIP,
                          QString("连接断开")
                          );
+    m_gateWay->GetCenter()->GetSocketList().removeOne(socket);
     Close();
 }
 
 void TcpSocket::SlotBytesWritten(qint64)
 {
     SendDataIn();
+}
+
+void TcpSocket::timerEvent(QTimerEvent *)
+{
+    if(socket->state()!=QTcpSocket::ConnectedState)
+    {
+        m_gateWay->SendUdp(m_remoteIP);
+        m_gateWay->GetCenter()->GetSocketList().removeOne(socket);
+        CheckConnect();
+    }
 }

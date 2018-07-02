@@ -1,6 +1,7 @@
 #include "gateway.h"
 #include "clientcenter.h"
 #include <QtDebug>
+#include <QUdpSocket>
 #include "device.h"
 #include "comm/pnet103app.h"
 #include "comm/promonitorapp.h"
@@ -56,9 +57,11 @@ QString GateWay::GetAddrString()
 
 void GateWay::OnTime()
 {
-    //qDebug()<<"------"<<QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz")
-    //       <<"-------";
     foreach (TcpSocket* tcp, m_lstSocket) {
+        if(tcp->GetTcpSocket()->state()==QTcpSocket::UnconnectedState)
+        {
+            SendUdp(tcp->GetRemoteIP());
+        }
         tcp->OnTimer();
     }
 }
@@ -83,7 +86,7 @@ void GateWay::Init(ushort sta,ushort dev,const QStringList& ips)
         TcpSocket* tcp = new TcpSocket(this);
         tcp->Init(ip,m_clientCenter->GetRemotePort(),
                   index++);
-
+        SendUdp(tcp->GetRemoteIP());
         connect(tcp,
                 SIGNAL(PacketReceived(NetPacket,int)),
                 this,
@@ -94,8 +97,12 @@ void GateWay::Init(ushort sta,ushort dev,const QStringList& ips)
                 this,
                 SLOT(Closed(int))
                 );
-        tcp->CheckConnect();
+
         m_lstSocket.append(tcp);
+    }
+    foreach(TcpSocket* tcp,m_lstSocket)
+    {
+        tcp->CheckConnect();
     }
 }
 
@@ -124,4 +131,34 @@ void GateWay::Closed(int index)
     if(!HasConnect()){
   //      InitNumber();
     }
+}
+
+void GateWay::SendUdp(QString ip)
+{
+    QDateTime now = QDateTime::currentDateTime();
+    //发点对点广播
+    QUdpSocket *m_pUdpSocket = new QUdpSocket();
+    uchar con_packet[41];
+    memset(con_packet, 0x00, sizeof(con_packet));
+    con_packet[0]=0xFF;
+    con_packet[1]=1;
+    struct TIME_S
+    {
+        ushort	ms;
+        uchar	min;
+        uchar	hour;
+        uchar	day;
+        uchar	month;
+        uchar	year;
+    }Time;
+    Time.year	= (uchar)now.date().year()-2000;
+    Time.month	= (uchar)now.date().month();
+    Time.day	= (uchar)now.date().day();
+    Time.hour	= (uchar)now.time().hour();
+    Time.min	= (uchar)now.time().minute();
+    Time.ms		= now.time().second()*1000+now.time().msec();
+    memcpy(&con_packet[2], &Time, 7);
+    QHostAddress ha;
+    ha.setAddress(ip);
+    m_pUdpSocket->writeDatagram((char*)con_packet,41,ha,1032);
 }

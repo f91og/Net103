@@ -1,6 +1,7 @@
 #ifndef NETPACKET_H
 #define NETPACKET_H
 #include <QByteArray>
+#include <QString>
 
 class NetPacket
 {
@@ -12,9 +13,12 @@ public:
     void SetDestAddr(ushort sta,ushort dev);
     void GetDestAddr(ushort& sta,ushort& dev)const;
 
+    void SetRemoteIP(QString ip);
+    QString GetRemoteIP();
+
     void AddAppData(const QByteArray& data);
     QByteArray GetAppData()const;
-public:
+private:
     QString m_remoteIP;
     ushort dev_addr;
     QByteArray m_data;
