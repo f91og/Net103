@@ -354,21 +354,23 @@ void SettingHandler::GenDataHandle(const QByteArray& data,int cot)
     m_device->GetProtocal()->AddDataType("GIN_00_03",dat);
 
     QVariant val = DeviceProtocol::GDDValue(GID,byType,bySize,byNum);
-    int groupType= m_device->GetGroupType(byGroup);
-    switch (groupType) {
-    case enumGroupTypeSettingArea:
+    //int groupType= m_device->GetGroupType(byGroup);
+    switch (byGroup) {
+    case 0x00:
     {
         if(kod == KOD_ACTUALVALUE){
             m_sg["EditSG"] = val;
             m_sg["ActSG"] = val;
         }
-        else if(kod == KOD_RANGE){
-            QVariantList list = val.toList();
-            if(list.count()>=2){
-                m_sg["NumOfSG"] = list[1];
-                m_sg["minSG"] = list[0];
-            }
-        }
+        m_sg["minSG"] = 0;  // 先固定切换定值区的区号范围
+        m_sg["NumOfSG"] = 255;
+//        else if(kod == KOD_RANGE){
+//            QVariantList list = val.toList();
+//            if(list.count()>=2){
+//                m_sg["NumOfSG"] = list[1];
+//                m_sg["minSG"] = list[0];
+//            }
+//        }
         m_settingAreaKey = key;
     }
         break;
@@ -449,14 +451,18 @@ void SettingHandler::ReadSettingSetting()
     m_sg.clear();
     m_lstSettingValue.clear();
     m_lstReadCmd.clear();
-    QVariantMap map;
+    QVariantMap mapForSettingArea;
+    mapForSettingArea["no"]=0x00;
+    mapForSettingArea["readType"]=KOD_ACTUALVALUE;
+    m_lstReadCmd.append(mapForSettingArea);
+
     AddGroupToCommand(0x03);
+    QVariantMap map;
     map["no"]=0x0e;
     map["readType"]=KOD_ACTUALVALUE;
     m_lstReadCmd.append(map);
     map["readType"] = KOD_DESCRIPTION;
     m_lstReadCmd.append(map);
-    qDebug()<<"m_lstReadCmd:"<<m_lstReadCmd;
     DoRead();
 }
 

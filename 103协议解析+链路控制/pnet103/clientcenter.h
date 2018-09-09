@@ -2,7 +2,7 @@
 #define CLIENTCENTER_H
 
 #include <QObject>
-#include <QTcpServer>
+#include "tcpserver.h"
 #include "gateway.h"
 #include "device.h"
 
@@ -15,22 +15,19 @@ const int IPACKET_WAIT_ACK_T1=15;
 const int IDEL_WAIT_T3=20;
 const int START_WAIT_T1=15;
 
-class ClientCenter : public QTcpServer
+class ClientCenter : public QObject
 {
     Q_OBJECT
 public:
-    ClientCenter(QObject *parent = 0);
+    ClientCenter(QObject *parent = 0); // *parent=0表示没有父对象，一般而言0和nullptr一致
     ushort GetRemotePort();
     void SetDeviceList(const QVariantList& list);
-
     Device* GetDevice(ushort sta,ushort dev);
-
     void SendAppData(ushort sta,ushort dev, const QByteArray& data);
-
     QList<QTcpSocket*> GetSocketList();
+    void StartListen();
 
 protected:
-    virtual void incomingConnection(qintptr handle) Q_DECL_OVERRIDE;
     void timerEvent(QTimerEvent *);
     void Clear();
 
@@ -40,6 +37,8 @@ private:
     QList<Device*> m_lstDevice;
     QMap<quint32,Device*> m_mapDevice;
     QList<QTcpSocket*> m_socketList;
+    TcpServer* server_a;
+    TcpServer* server_b;
 };
 
 #endif // CLIENTCENTER_H

@@ -35,7 +35,7 @@ public:
     void OnTime();
 
     QString GetAddrString();
-    void SendUdp(QString ip);
+    void SendUdp(QString ip, int index, bool isConnected);
     void SyncSocket(QTcpSocket* socket);
 private:
     void SendIPacket(const NetPacket &np);
@@ -44,7 +44,7 @@ private:
     bool IsNumberValid(ushort num);
 private slots:
     void PacketReceived(const NetPacket& np,int index);
-    void Closed(int index);
+    void Closed(int index, QString ip, uchar cpu_no);
 private:
     QStringList m_lstIp;
     ushort m_staionAddr;
@@ -54,6 +54,7 @@ private:
     ClientCenter* m_clientCenter;
     QList<Device*> m_lstDevice;
     QList<NetPacket> m_lstIPacketSend;
+    int m_lastConnectIndex;
 };
 
 #endif // GATEWAY_H

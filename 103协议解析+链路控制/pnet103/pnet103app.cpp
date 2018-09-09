@@ -15,7 +15,6 @@ PNet103App::PNet103App(QObject *parent) :
 {
     d = new PNet103AppPrivate;
     d->m_clientCenter = new ClientCenter(this);
-    d->m_clientCenter->listen(QHostAddress::Any, 1048);
 }
 
 PNet103App::~PNet103App()

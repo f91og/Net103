@@ -11,7 +11,8 @@ HEADERS += \
     tcpsocket.h \
     gateway.h \
     device.h \
-    netpacket.h
+    netpacket.h \
+    tcpserver.h
 
 SOURCES += \
     pnet103app.cpp \
@@ -19,4 +20,5 @@ SOURCES += \
     tcpsocket.cpp \
     gateway.cpp \
     device.cpp \
-    netpacket.cpp
+    netpacket.cpp \
+    tcpserver.cpp

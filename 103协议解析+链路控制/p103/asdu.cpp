@@ -153,7 +153,6 @@ CAsdu10Link::CAsdu10Link(CAsdu &a)
     time=a.m_ASDUData.mid(9,9);
     a.m_ASDUData=a.m_ASDUData.mid(18);
     ASdu10LinkDataSet *pDataSet=NULL;
-    qDebug()<<"开始封装";
     qDebug()<<a.m_ASDUData.toHex();
     for(int i=0;i<reportArgNum*3;i++)
     {

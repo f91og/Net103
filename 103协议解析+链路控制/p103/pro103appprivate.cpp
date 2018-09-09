@@ -197,7 +197,7 @@ bool Pro103AppPrivate::Start()
         }
         QString ipb = dev->Get("ipb").toString();
         if(!ipb.isEmpty()){
-            ips +=ipb;
+            ips +=ipb;  // 这里的QVariantList用法
         }
         if(ips.isEmpty()){
             continue;
@@ -205,7 +205,8 @@ bool Pro103AppPrivate::Start()
         map["staAddr"]=staAddr;
         map["devAddr"]=devAddr;
         map["ips"]=ips;
-
+        QString ip_used=(!ipa.isEmpty()? ipa:ipb);
+        uint cpu_no=devAddr-256*(ip_used.section('.',3,3).toUInt());
         QSettings *device=new QSettings("Device_Info/Device/device.ini", QSettings::IniFormat);
         device->setIniCodec("GBK");
         device->beginGroup("DEVICE");
@@ -220,8 +221,9 @@ bool Pro103AppPrivate::Start()
         device->beginGroup("DEVICE"+QString("%1").arg(num_new));
         device->setValue("TYPE", dev->Get("type").toString());
         device->setValue("NAME", dev->Get("name").toString());
-        device->setValue("IPA", dev->Get("ipa").toString());
-        device->setValue("IPB", dev->Get("ipb").toString());
+        device->setValue("CPU",cpu_no);
+        device->setValue("IPA", ipa);
+        device->setValue("IPB", ipb);
         device->endGroup();
         delete device;
         list.append(map);

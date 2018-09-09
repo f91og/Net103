@@ -21,15 +21,16 @@ TcpSocket::TcpSocket(GateWay *parent):
     link_t1 = setting.value("link_t1",60).toUInt();
     link_t2 = setting.value("link_t2",30).toUInt();
     setting.endGroup();
-    m_sendudpTime=12;
+    m_udpBroadcastTime=12;
+    m_udpHandShakeTime=10;
     m_waitTime=link_t1;
-    startTimer(1000);
+    m_lastConnectTime=link_t2;
 }
 
 void TcpSocket::Init(const QString& ip, ushort port, int index)
 {
-    m_remoteIP=ip;
-    m_remotePort=port;
+    m_remoteIP = ip;
+    m_remotePort = port;
     m_index = index;
 }
 
@@ -38,7 +39,7 @@ void TcpSocket::CheckConnect(QTcpSocket* s)
     QString ip = s->peerAddress().toString();
     if(ip.contains(m_remoteIP)&&(socket==NULL)){
         socket = s;
-        m_appState = AppStarting;
+     //   m_appState = AppStarting;
         connect(socket,&QTcpSocket::readyRead,this,&TcpSocket::SlotReadReady);
         connect(socket,&QTcpSocket::disconnected,this,&TcpSocket::SlotDisconnected);
         connect(socket,SIGNAL(error(QAbstractSocket::SocketError)),this,SLOT(SlotError(QAbstractSocket::SocketError)));
@@ -47,15 +48,12 @@ void TcpSocket::CheckConnect(QTcpSocket* s)
 
 void TcpSocket::SendPacket(const NetPacket &np)
 {
-    if(socket->state()!= QTcpSocket::ConnectedState){
-        return;
-    }
     SendData(np.GetAppData());
 }
 
 void TcpSocket::SendData(const QByteArray& data)
 {
-    if(socket->state()!= QTcpSocket::ConnectedState){
+    if(socket==NULL||socket->state()!= QTcpSocket::ConnectedState){
         return;
     }
     m_sendData.clear();
@@ -71,9 +69,8 @@ void TcpSocket::SendData(const QByteArray& data)
 
 void TcpSocket::CheckReceive()
 {
-    //粘包处理，需要加最长长度错误判断嘛？
+    //粘包处理
     while(m_recvData.length()>=10){
-        qDebug()<<"m_recvData:"<<m_recvData.toHex();
         ProMonitorApp::GetInstance()
                 ->AddMonitor(ProNetLink103,
                              MsgRecv,
@@ -81,7 +78,6 @@ void TcpSocket::CheckReceive()
                              QString(),
                              m_recvData);
         uchar firt_byte=m_recvData[0];
-
         while(m_recvData.length()>0 && firt_byte!=0x0a && firt_byte!=0xc9 && firt_byte!=0xc8 && firt_byte!=0x05){
             m_recvData=m_recvData.mid(1);
             firt_byte=m_recvData[0];
@@ -94,7 +90,7 @@ void TcpSocket::CheckReceive()
         uchar fun=m_recvData[4];
         uchar inf=m_recvData[5];
         qDebug()<<"vsq"<<vsq<<"cot"<<cot<<"fun"<<fun<<"inf"<<inf;
-        if(firt_byte==0xc9 && m_recvData.length()>=17){
+        if(firt_byte==0xc9 && m_recvData.length()>=17){ // ASDU201
             if(vsq!=0x81 || cot!=9 || fun!=0xff || inf!=0){
                 m_recvData=m_recvData.mid(1);
                 return;
@@ -108,38 +104,51 @@ void TcpSocket::CheckReceive()
                 listNum--;
             }
             if(listNum==0) isValid=true;
-        }else if(firt_byte==0x05 && m_recvData.length()>=19){
+        }else if(firt_byte==0x05 && m_recvData.length()>=19){   // ASDU5
             if(vsq!=0x81 || (fun!=0xfe && fun!=0xff) || inf!=2){
                 m_recvData=m_recvData.mid(1);
                 return;
             }
             packet=m_recvData.left(19);
             isValid=true;
-        }else if(firt_byte==0xc8){
-            //暂时默认传 asdu200不会粘包
+        }else if(firt_byte==0xc8){  // ASDU200
             if(vsq!=0x81 || cot!=9 || fun!=0xff || inf!=0){
                 m_recvData=m_recvData.mid(1);
                 return;
             }
+            if(m_recvData.size()<67) return; // 长度不够
+            QByteArray temp;
+            temp[0]=0xc8;
+            temp[1]=0x81;
+            temp[2]=0x09;
+            temp[3]=m_recvData[3];
+            int index=m_recvData.indexOf(temp,4);
+            int lastIndex=m_recvData.lastIndexOf(temp);
+            qDebug()<<"index--><"<<index;
             isValid=true;
-            packet=m_recvData;
-        }else{
-            //设备不知道为什么会上送0a 81 2b 01 fe fb 01 01 0a 00这个奇怪的报文
+            if(lastIndex==0){
+                if(m_recvData[10]==0){
+                    packet=m_recvData;
+                }else{
+                    return;
+                }
+            }else{
+               packet=m_recvData.left(index);
+            }
+        }else if(firt_byte==0x0a){
             if(vsq!=0x81 || (fun!=0xfe && fun!=0xff)){
                 m_recvData=m_recvData.mid(1);
                 return;
             }
-            QByteArray d10(10,0);
-            uchar array[10]={0x0a,0x81,0x2b,0x01,0xfe,0xfb,0x01,0x01,0x0a,0x00};
-            memcpy(d10.data(),&array,10);
-            d10[3]=m_recvData[3];
-            if(m_recvData.contains(d10)){
+            if((uchar)m_recvData[2]==0x2b){    // 2b表示读命令的无效数据响应，固定返回10个字节
                 packet=m_recvData.left(10);
                 isValid=true;
             }else{
                 packet=m_recvData.left(8);
                 QByteArray data_all=m_recvData.mid(8);
-                uchar ngd=packet[7]%64;
+                ushort ngd_o=packet[7]; // 这里一定要先将uchar转为整数再进行取余运算
+                uchar ngd=ngd_o%64;
+                qDebug()<<"ngd-->"<<ngd;
                 while(data_all.length()>=6 && ngd>0){
                     uchar data_size=data_all[4];
                     uchar num=data_all[5];
@@ -151,6 +160,7 @@ void TcpSocket::CheckReceive()
                         break;
                     }
                 }
+                qDebug()<<"ngd-->"<<ngd;
                 if(ngd==0) isValid=true;
             }
         }
@@ -236,7 +246,7 @@ void TcpSocket::SlotConnected()
                          MsgInfo,
                          m_remoteIP,
                          QString("连接成功。"));
-    m_appState = AppStarting;
+    //m_appState = AppStarting;
     //StartWait(START_WAIT_T1);// socket连接成功后，等待数据包传送，有数据包传送才能认为是应用真正启动了
 }
 
@@ -263,8 +273,16 @@ void TcpSocket::OnTimer()
 
 void TcpSocket::TimerOut()
 {
-    if(m_appState == AppStarted){
-        // 通过定时器和全局计数器的组合可以实现一些有用的功能
+    qDebug()<<"定时器标记";
+    if(m_appState==AppStarted){
+        qDebug()<<"m_udpHandShakeTime"<<m_udpHandShakeTime;
+        if(m_udpHandShakeTime>0){
+            m_udpHandShakeTime--;
+            if(m_udpHandShakeTime==0){
+                m_gateWay->SendUdp(m_remoteIP,m_index,true);
+                m_udpHandShakeTime=10;
+            }
+        }
         qDebug()<<"m_waitTime"<<m_waitTime;
         if(m_waitTime>0){
             m_waitTime--;
@@ -276,18 +294,24 @@ void TcpSocket::TimerOut()
                              m_remoteIP,
                              QString("连接接收超时"));
         Close();
+    }else{
+        qDebug()<<"m_udpBroadcastTime"<<m_udpBroadcastTime;
+        m_udpBroadcastTime--;
+        if(m_udpBroadcastTime==0){
+            m_gateWay->SendUdp(m_remoteIP,m_index,false);
+            m_udpBroadcastTime=12;
+        }
     }
-}
-
-void TcpSocket::timerEvent(QTimerEvent *){
     if(m_appState==AppRestarting){
         m_lastConnectTime--;
+        qDebug()<<"m_lastConnectTime"<<m_lastConnectTime;
         if(m_lastConnectTime==0){
             QByteArray send(20,0);
             uchar array[14]={0x0a,0x81,0x01,cpu_no,0xfe,
                              0xf4,0x01,0x01,0x05,0x25,0x01,0x12,0x06,0x01};
-            memcpy(&send, array, 14);
+            memcpy(send.data(), &array, 14); //利用memcpy将数组赋给QByteArray，可以指定复制的起始位和复制多少个
             send[14]=2;
+            if(m_index==1) send[9]=0x26;
             QDateTime now = QDateTime::currentDateTime();
             struct TIME_S
             {
@@ -299,33 +323,11 @@ void TcpSocket::timerEvent(QTimerEvent *){
             Time.min	= (uchar)now.time().minute();
             Time.ms		= now.time().second()*1000+now.time().msec();
             memcpy(send.data()+15, &Time, 4);
-            qDebug()<<"link send"<<send.toHex();
             NetPacket np(send);
             np.SetRemoteIP(m_remoteIP);
             np.SetDestAddr(0,cpu_no);
             emit PacketReceived(np,m_index);
-            if(socket->isOpen()){
-                socket->close();
-                socket=NULL;
-                m_appState=AppNotStart;
-            }
         }
-        return;
-    }
-    qDebug()<<"正确使用定时器了"<<m_sendudpTime;
-    if(m_sendudpTime>0){
-        m_sendudpTime--;
-        return;
-    }
-    m_sendudpTime=12;
-    if(m_appState == AppStarted){//有连接则发心跳报文,但是发送一定次数后连接会错误，不知道是什么原因
-        qDebug()<<"发送心跳报文，不对时";
-        QByteArray data(9,0);
-        data[0]=0x88;
-        data[1]=0x01;
-        SendData(data);
-    }else if(m_appState == AppNotStart){
-        m_gateWay->SendUdp(m_remoteIP);
     }
 }
 
@@ -334,8 +336,14 @@ int TcpSocket::GetIndex()
     return m_index;
 }
 
+bool TcpSocket::IsConnected(){
+    if(socket==NULL) return false;
+    return socket->state()==QTcpSocket::ConnectedState;
+}
+
 void TcpSocket::Close()
 {
+    if(socket==NULL) return;
     ProMonitorApp::GetInstance()
             ->AddMonitor(ProNetLink103,
                          MsgError,
@@ -349,15 +357,15 @@ void TcpSocket::Close()
     if(socket->isOpen()){
         socket->close();
         socket=NULL;
-        emit Closed(m_index);
+        emit Closed(m_index, m_remoteIP, cpu_no);
         ProMonitorApp::GetInstance()
                 ->AddMonitor(ProNetLink103,
                              MsgInfo,
                              m_remoteIP,
                              QString("重新连接中"));
-        m_appState=AppRestarting;
         m_lastConnectTime=link_t2;
-        m_gateWay->SendUdp(m_remoteIP);
+        m_gateWay->SendUdp(m_remoteIP,m_index,false);
+        m_appState=AppRestarting;
     }
 }
 

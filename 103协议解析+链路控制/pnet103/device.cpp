@@ -74,7 +74,6 @@ void Device::OnTimer(int index)
         m_testTimer[index]--;
     }
     if(m_testTimer[index]==0){
-
         NetState(index,0);
     }
 }
@@ -87,7 +86,6 @@ void Device::NetState(int index, bool conn)
     if(conn){
         m_testTimer[index]=link_t1;
     }
-    qDebug()<<"index:"<<index<<"m_state:"<<m_state[index];
     if(m_state[index]!=conn){
         PNet103App::GetInstance()
             ->EmitNetStateChange(m_stationAddr,

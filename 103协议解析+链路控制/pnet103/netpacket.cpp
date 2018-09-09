@@ -22,14 +22,11 @@ void NetPacket::SetDestAddr(ushort sta,uchar cpu_no)
 {
     QString ip_last=m_remoteIP.section(".",3,3);
     dev_addr=ip_last.toUShort()*0x100+cpu_no;
-    qDebug()<<"dev----->"<<dev_addr;
 }
 
 void NetPacket::GetDestAddr(ushort& sta,ushort& dev) const
 {
     sta=0;
-//    dev=ip_last.toUShort()*0x100+dev_addr;
-//    dev=140*0x100+01;
     dev=dev_addr;
 }
 

@@ -188,8 +188,8 @@ void ReadGroupValueCommand::RecvData(const QByteArray &data, uchar cot)
     else{
         if(m_handler){
             m_handler->ReadErrorHandle(QString("读取组属性失败：组号：%1，属性：%2")
-                                   .arg(m_groupNo)
-                                   .arg(m_readType));
+                                       .arg(m_groupNo)
+                                       .arg(m_readType));
         }
         this->deleteLater();
         return;
@@ -219,6 +219,10 @@ void ReadGroupValueCommand::DoCommand()
     uchar* GIR = (uchar*)data.data()+GENREQCOM_GIR;
     GIR[GENID_GIN] = m_groupNo;
     GIR[GENID_GIN+1] = 0;
+    if(m_groupNo==0){
+        data[GENREQCOM_INF] = 244;
+        GIR[GENID_GIN+1] = 0x03;
+    }
     GIR[GENID_KOD] = m_readType;
     m_protocal->SendAsdu21(data);
     ProMonitorApp::GetInstance()
@@ -236,7 +240,7 @@ void ReadGroupValueCommand::TimerOut()
 {
     if(m_handler){
         m_handler->ReadErrorHandle(QString("读取组%1超时")
-                               .arg(m_groupNo));
+                                   .arg(m_groupNo));
     }
     this->deleteLater();
 }
@@ -314,7 +318,7 @@ void GenWriteCommand::SendAffirm()
     head[GENDATACOM_RII] = m_RII;
     uchar ngd=0;
     if(m_countBit){
-       ngd |= 0x40;
+        ngd |= 0x40;
     }
     m_countBit=!m_countBit;
     head[GENDATACOM_NGD] = ngd;
@@ -609,7 +613,7 @@ void ControlCommand::DoCommand()
     else{
         if(m_handler){
             m_handler->WriteErrorHandle(QString("103规约不支持该遥控类型:%1")
-                                   .arg(m_obj->GetEnumDesc("type")));
+                                        .arg(m_obj->GetEnumDesc("type")));
         }
         return;
     }

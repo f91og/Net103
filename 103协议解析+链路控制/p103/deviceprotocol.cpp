@@ -49,22 +49,34 @@ void DeviceProtocol::OnTimer()
     QDateTime now = QDateTime::currentDateTime();
     if(!m_generalQueryTime.isValid() ||m_generalQueryTime.secsTo(now)>g_103p->m_periodGeneral){
         SendGeneralQuery();
-    }
-
-    if(!m_readPulseTime.isValid() || m_readPulseTime.secsTo(now)>g_103p->m_periodPulse){
         if(isQueryingLuBo==false){
             QueryWaveFileList();
         }
+
     }
+
+//    if(!m_readPulseTime.isValid() || m_readPulseTime.secsTo(now)>g_103p->m_periodPulse){
+//        //定时读软压板
+//        QByteArray send_softYaBan(7,0);
+//        uchar array[7]={0xfe,0xf1,m_RII,0x01,0x0e,0x00,0x01};
+//        memcpy(send_softYaBan.data(), &array, 7); //利用memcpy将数组赋给QByteArray，可以指定复制的起始位和复制多少个
+//        SendAsdu21(send_softYaBan);
+//        //ReadPulse();
+//    }
+
+//    if(!m_readRelayMesureTime.isValid() || m_readRelayMesureTime.secsTo(now)>g_103p->m_periodRelayMeasure){
+//        ReadRelayMeasure();
+//    }
 }
 
 void DeviceProtocol::QueryWaveFileList()
 {
-    ushort ip_u=m_device->GetDevAddr();
-    ip=ip_u>>8;
+    QString ipa=m_device->m_obj->Get("ipa").toString();
+    ushort ip_u=m_device->GetDevAddr(); // 43777
+    ip=ip_u>>8; // ip是除后结果，ip_u是余数
     addr=ip_u;
-    ip_addr="192.168.0.";
-    ip_addr.append(QString::number(ip)).append("_").append(QString::number(addr));
+    ip_addr=ipa.append("_").append(QString::number(addr));
+
     isQueryingLuBo=true;
     luBo_list.clear();
     CAsdu201 a201;
@@ -78,7 +90,7 @@ void DeviceProtocol::QueryWaveFileList()
 void DeviceProtocol::QueryChanel()
 {
     m_lstQueryChannelPack.clear();
-    for(int i=0;i<4;i++)
+    for(int i=1;i<4;i++)
     {
         QVariantMap map;
         CAsdu21 a21;
@@ -91,11 +103,9 @@ void DeviceProtocol::QueryChanel()
         {
             pDataSet->gin.GROUP=0x1d;
             pDataSet->gin.ENTRY=0x00;
-            if(i==0) pDataSet->kod=10;
-            if(i==1) pDataSet->kod=9;
-            if(i==2) pDataSet->kod=1;
-        }else
-        {
+            if(i==1) pDataSet->kod=10;  // 描述
+            if(i==2) pDataSet->kod=1;   // 实际值，也就是系数
+        }else{
             pDataSet->gin.GROUP=0x20;
             pDataSet->gin.ENTRY=0x00;
             pDataSet->kod=10;
@@ -249,7 +259,6 @@ void DeviceProtocol::AnaData(const QByteArray& data)
         break;
     case 201:
     {
-        qDebug()<<"接收录波列表文件报文";
         QSettings *waveFileList=new QSettings("WaveFile/"+ip_addr+"/FileList.ini",QSettings::IniFormat);
         qDebug()<<ip_addr;
         waveFileList->beginGroup("List");
@@ -403,16 +412,17 @@ void DeviceProtocol::GenDataHandle(const QByteArray& data,int cot)
             .arg(byGroup)
             .arg(byInf);
     MeasPointInfo* mpi = m_device->GetMeasPointInfo(key);
-    qDebug()<<"DB TEST";
-    qDebug()<<"Key"<<key;
-    ulong device_id=mpi->m_obj->Get("device_id").toULongLong();
-    DbObjectPtr m_dev=DbSession::GetInstance()->GetObject("Device",device_id);
-    qDebug()<<"DB class"<<m_dev->GetDbClass()->GetName();
-
-//    foreach(DbObjectPtr o, m_dev->RelationMany("meas_points")){
-//        QString ref = o->Get("reference").toString();
-//        mapMeas[ref]=o;
-//    }
+//    QString refer=mpi->m_obj->Get("reference").toString();
+//    qDebug()<<"refer:"<<refer;
+//    qDebug()<<mpi->m_obj->GetId();
+//    qDebug()<<mpi->m_obj->GetDbClass()->GetName();
+//    qDebug()<<mpi->m_obj->GetBitString("name","");
+//    qDebug()<<mpi->m_obj->Get("oname").toString();
+//    qDebug()<<"DB TEST";
+//    qDebug()<<"Key"<<key;
+//    ulong device_id=mpi->m_obj->Get("device_id").toULongLong();
+//    DbObjectPtr m_dev=DbSession::GetInstance()->GetObject("Device",device_id);
+//    qDebug()<<"DB class"<<m_dev->GetDbClass()->GetName();
 
     switch (byGroup) {
     case 0x06://保护测量
@@ -602,10 +612,7 @@ void DeviceProtocol::GenDataHandle(const QByteArray& data,int cot)
                 t=t.addMSecs(ms);
                 dt = QDateTime(d,t);
             }
-            bool change = (cot==1||cot==2);
-            if(cot==2){
-
-            }
+            bool change = (cot==1);
             //带时标的遥信的处理
             if(mpi){
                 mpi->SetValue(val,change,dt);
@@ -969,14 +976,14 @@ void DeviceProtocol::HandleASDU10(const QByteArray& data)
         return;
     }
     //单独处理带时标的遥信
-    if(data[8]==0x08 && data[2]==0x01){
-        HandleYXWithSOE(data);
-        return;
-    }
+//    if(data[8]==0x08 && data[2]==0x01){
+//        HandleYXWithSOE(data);
+//        return;
+//    }
     //单独处理动作报告
-    if(data[8]==0x04){
-        HandleEvent(data);
-    }
+//    if(data[8]==0x04){
+//        HandleEvent(data);
+//    }
 
     ushort wLen = data.size()-4;
     uchar* pData = (uchar*)data.data();
@@ -1024,22 +1031,17 @@ void DeviceProtocol::HandleQueryChannel(const QByteArray& data)
         for(int i=0;i<a10.m_DataSets.size();i++)
         {
             QString key=QString::number(a10.m_DataSets.at(i).gin.ENTRY);
-            if(a10.m_RII==0)//如果返回的是通道描述
+            if(a10.m_RII==1)//如果返回的是通道描述
             {
                 QString description=QString::fromLocal8Bit(a10.m_DataSets.at(i).gid);
                 moni->setValue(key,description);
-            }
-            else if(a10.m_RII==1)//量纲
+            }else if(a10.m_RII==2)//实际值，系数
             {
                 QString formalValue=moni->value(key).toString();
-                QString newValue=formalValue.append(",").append(QString::fromLocal8Bit(a10.m_DataSets.at(i).gid));
-                moni->setValue(key,newValue);
-            }
-            else if(a10.m_RII==2)//实际值，计算系数
-            {
-                QString formalValue=moni->value(key).toString();
-                QString newValue=formalValue.append(",").append(QString("%1").arg(a10.m_DataSets.at(i).gid.toFloat()));
-                moni->setValue(key,newValue);
+                uchar* GID = (uchar*)a10.m_DataSets.at(i).gid.data();
+                float fVal= ToolByteToNumber<float>(&GID[0]); // 将byte数组解析成具体的浮点数
+                QString newValue=formalValue+" "+QString("%1").arg(fVal);
+                moni->setValue(key,QVariant(newValue));
             }
         }
         int num=moni->childKeys().size();
@@ -1137,8 +1139,8 @@ void DeviceProtocol::HandleEvent(const QByteArray& data)
     ushort ip_u=m_device->GetDevAddr();
     ip=ip_u>>8;
     addr=ip_u;
-    ip_addr="192.168.0.";
-    ip_addr.append(QString::number(ip)).append("_").append(QString::number(addr));
+    ip_addr=m_device->m_obj->Get("ipa").toString();
+    ip_addr.append("_").append(QString::number(addr));
     QList<ASdu10LinkDataSet> dList=a10Link.m_DataSet;
     ASdu10LinkDataSet d;
     if(dList.size()>0){

@@ -25,7 +25,6 @@ public:
               int index);
 
     void CheckConnect(QTcpSocket* socket);
-    void SendUdp();
     void TimerOut();
     QTcpSocket* GetTcpSocket();
     void SendPacket(const NetPacket& np);
@@ -36,17 +35,15 @@ public:
     void StartWait(int s);
 
     int GetIndex();
-
+    bool IsConnected();
     void OnTimer();
-protected:
-    void timerEvent(QTimerEvent *);
 private:
     void SendData(const QByteArray& data);
     void SendDataIn();
     void CheckReceive();
 signals:
     void PacketReceived(const NetPacket& np,int index);
-    void Closed(int index);
+    void Closed(int index, QString m_remoteIP, uchar cpu_no);
 public slots:
     void SlotReadReady();
     void SlotError(QAbstractSocket::SocketError socketError);
@@ -70,9 +67,10 @@ private:
     int m_waitTime;
     int m_index;
     uchar cpu_no;
-    int m_sendudpTime;
-    ushort link_t1;
-    ushort link_t2;
+    int m_udpBroadcastTime;
+    int m_udpHandShakeTime;
+    int link_t1;
+    int link_t2;
 };
 
 #endif // TCPSOCKET_H

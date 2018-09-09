@@ -2,28 +2,20 @@
 #include <QSettings>
 
 ClientCenter::ClientCenter(QObject *parent) :
-    QTcpServer(parent)
+    QObject(parent)
 {
     QSettings setting("../etc/p103.ini",QSettings::IniFormat);
     setting.beginGroup("p103");
     m_remotePort = setting.value("port",1032).toUInt();
     setting.endGroup();
+    server_a=new TcpServer(this);
+    server_b=new TcpServer(this);
     startTimer(1000);
 }
 
 ushort ClientCenter::GetRemotePort()
 {
     return m_remotePort;
-}
-
-void ClientCenter::incomingConnection(qintptr handle)
-{
-    QTcpSocket* socket = new QTcpSocket();
-    socket->setSocketDescriptor(handle);
-    foreach(GateWay* g,m_lstGateWay)
-    {
-        g->SyncSocket(socket);
-    }
 }
 
 void ClientCenter::SendAppData(ushort sta,ushort dev, const QByteArray& data)
@@ -92,6 +84,14 @@ void ClientCenter::SetDeviceList(const QVariantList& list)
         gw->Init(sta,dev,sips);
         m_lstGateWay.append(gw);
     }
+    StartListen();
+}
+
+void ClientCenter::StartListen(){
+    server_a->SetGateWay(m_lstGateWay);
+    server_b->SetGateWay(m_lstGateWay);
+    server_a->listen(QHostAddress::Any, 1048);
+    server_b->listen(QHostAddress::Any, 1049);
 }
 
 void ClientCenter::timerEvent(QTimerEvent *)
