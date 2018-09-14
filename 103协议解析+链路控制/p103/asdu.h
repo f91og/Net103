@@ -13,7 +13,7 @@ public:
     virtual ~CAsdu();
 
 //    virtual void BuildArray(QByteArray& Data);
-    void SaveAsdu(QByteArray& Data);
+    void SaveAsdu(const QByteArray& Data);
 
     BYTE m_TYP; //ASDU 类型标识
     BYTE m_VSQ; //ASDU 可变结构限定词

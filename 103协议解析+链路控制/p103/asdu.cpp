@@ -22,12 +22,11 @@ CAsdu::~CAsdu()
     m_ASDUData.resize(0);
 }
 
-void CAsdu::SaveAsdu(QByteArray &Data)//将转来的Data解析，放入未知类型的Asdu中
+void CAsdu::SaveAsdu(const QByteArray &Data)//将转来的Data解析，放入未知类型的Asdu中
 {
     if(Data.size()<6)  //如果是损坏的包则不解析传来的包
     {
         m_iResult=0;
-        Data.resize(0);
         return;
     }
 
@@ -39,7 +38,6 @@ void CAsdu::SaveAsdu(QByteArray &Data)//将转来的Data解析，放入未知类
     m_INF=Data[5];
     // 将Data中封装的数据赋给Asdu中的m_ASDUData
     m_ASDUData=Data.mid(6);
-    Data.resize(0);
     m_iResult=1;
 }
 
@@ -94,7 +92,7 @@ CAsdu10::~CAsdu10()
 }
 
 void CAsdu10::BuildArray(QByteArray &Data)
-{   
+{
     Data.resize(0);
     Data.append(m_TYP);
     Data.append(m_VSQ);
@@ -155,7 +153,6 @@ CAsdu10Link::CAsdu10Link(CAsdu &a)
     time=a.m_ASDUData.mid(9,9);
     a.m_ASDUData=a.m_ASDUData.mid(18);
     ASdu10LinkDataSet *pDataSet=NULL;
-    qDebug()<<"开始封装";
     qDebug()<<a.m_ASDUData.toHex();
     for(int i=0;i<reportArgNum*3;i++)
     {
@@ -241,7 +238,6 @@ CAsdu201::CAsdu201(CAsdu &a)
     m_Addr=a.m_Addr;
     m_FUN=a.m_FUN;
     m_INF=a.m_INF;
-    //start_time和end_time需要处理吗？
     //newValue = (value1<<8) | value2;
     QByteArray tmp=a.m_ASDUData;
     listNum=tmp[10]<<8 | tmp[9];//取值这里终于搞明白了额

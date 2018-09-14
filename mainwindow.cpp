@@ -9,10 +9,8 @@
 #include <QDir>
 #include <unistd.h>
 #include <QSettings>
-
-bool isGetdingzhi;
-QTcpServer* server;
-QTcpSocket* socket;
+#include <QTimer>
+#include <QDateTime>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -33,16 +31,22 @@ MainWindow::~MainWindow()
 void MainWindow::server_New_Connect()
 {
     socket = server->nextPendingConnection();
+    socket_list.append(socket);
     ui->textEdit_Recv->setText("客户端已连接......");
-//    SendAsdu07();
-//    SendAsdu21ForYaBan();
-//    SendAsdu21ForNeiBuDingZhi();
-//    GetDeviceDingZhi();
-    pthread_t threadidtmp;
-    pthread_create(&threadidtmp,NULL,UDPThread,NULL);
-    pthread_create(&threadidtmp,NULL,GetLuBo,NULL);
+    //   SendAsdu07();
+    //   GetYaBan();
+    //   GetNeiBuDingZhi(0x00,1);
+    //   GetDeviceDingZhi();
     QObject::connect(socket, &QTcpSocket::readyRead, this, &MainWindow::socket_Read_Data);
     QObject::connect(socket, &QTcpSocket::disconnected, this, &MainWindow::socket_Disconnected);
+    QObject::connect(this,&MainWindow::reciveAllLuBoPakcet,this,&MainWindow::GetLuBo);
+    //定时发asdu07和查询录波文件
+    //    GetLuBo();
+    //    timer=new QTimer();
+    //    timer->setInterval(5000);
+    //    timer->start();
+    //    QObject::connect(timer,SIGNAL(timeout()), this, SLOT(onTimerOut()));
+    BeforeGetLuBo();
 }
 
 void MainWindow::socket_Read_Data()
@@ -60,6 +64,8 @@ void MainWindow::socket_Disconnected()
 
 void MainWindow::on_start_button_clicked()
 {
+    pthread_t threadidtmp;
+    pthread_create(&threadidtmp,NULL,UDPThread,NULL);
     ui->textEdit_Recv->setText("开始连接子站......");
     server->listen(QHostAddress::Any, 1048);
 }
@@ -74,63 +80,71 @@ void MainWindow::ExplainASDU(QByteArray &Data)
         if(a.m_iResult==0) return;
         switch (a.m_TYP) {
         case 0x0a:
-            if((BYTE)Data[2]==0x02&&(BYTE)Data[8]==0x04)//如果循环上送的是报告，则需特殊处理
-            {
-                QFile file0("E:\\Net103\\192.168.0.171-01-循环上报-动作报告.txt");
-                QString datatype="功能类型和信息序号";
-                file0.open(QIODevice::WriteOnly | QIODevice::Text);
-                QTextStream in(&file0);
-                in.setCodec("UTF-8");
-                CAsdu10Link a10link(Data);
-                in<<"动作报告--"<<"条目号："<<a10link.gin_h.ENTRY<<"--"
-                 <<"共有"<<a10link.reportArgNum<<"个动作参数"
-                 <<"--通用分类标识数据："<<a10link.d1.gid<<"\n";
-                for(int i=0;i<a10link.reportArgNum;i++)
-                {
-                    in<<"描述(8位ASCLL码)："<<a10link.m_DataSet.at(i).gid;
-                    in<<"量纲(8位ASCLL码)："<<a10link.m_DataSet.at(i+1).gid;
-                    in<<"实际值(<1><2><3><4><5><6><7>)："<<a10link.m_DataSet.at(i).gid;
-                    i=i+3;
-                }
-                file0.close();
-            }else
-            {
-               ProcessAsdu10(a);
-            }
+            ProcessAsdu10(a);
             break;
-        case 0xc9:  // 收到的是asdu201
+        case 0xc9:  // 收到的是asdu201, 维护录波文件列表
         {
-            QList<CAsdu200> Asdu200List;
-            //Qt中使用QSetting类读写ini文件,https://blog.csdn.net/qiurisuixiang/article/details/7760828
+            qDebug()<<"Recive asdu201......";
             QSettings *waveFileList=new QSettings("WaveFile/192.168.0.171_CPU1/FileList.ini",QSettings::IniFormat);
             waveFileList->beginGroup("List");
-            CAsdu201 a201(Data);
+            CAsdu201 a201(a);
+            qDebug()<<"list num:"<<a201.listNum;
             if(a201.listNum<=0) return;//有录波文件才召
             for(int i=0;i<a201.listNum;i++)
             {
                 int num=a201.m_DataSets.at(i).lubo_num;
-                waveFileList->setValue(QString(i+1),QString(num));
-                CAsdu200 a200;
-                a200.file_name=a201.m_DataSets.at(i).file_name;
-                QByteArray sData;
-                a200.BuildArray(sData);
-                socket->write(sData);
-                socket->flush();
+                waveFileList->setValue(QString::number(i+1),QString("%1").arg(num, 5, 10, QChar('0')));//这里要格式化数字
             }
             waveFileList->endGroup();
             delete waveFileList;
+
+            for(int i=0;i<a201.listNum;i++)
+            {
+                luBo_list.append(a201.m_DataSets.at(i).file_name);
+            }
+            if(luBo_list.size()>0)
+            {
+                emit reciveAllLuBoPakcet(luBo_list.at(0));
+            }
             break;
         }
-        case 0xc8:  // 收到的是asdu200，将asud200存成datagram数据文件,这里可能会收到不同子站的asdu200
-        {   //首先要判断ip和应用服务单元公共地址，确定写入哪个文件夹
-            QByteArray name=Data.mid(13,31);//取文件名称
-            QTextCodec *codec=QTextCodec::codecForName("GBK");//解决乱码问题
-            QString str=codec->toUnicode(name);
-            QFile file("E:\\Net103\\WaveFile\\192.168.0.171_CPU1\\"+str+".datagram");
-            file.open(QIODevice::WriteOnly);
-            QTextStream in(&file);
-            in<<Data;
-            file.close();
+        case 0xc8:  // 收到的是asdu200，将asud200存成datagram数据文件
+        {
+            //首先要判断ip和应用服务单元公共地址，确定写入哪个文件夹
+            qDebug()<<"Recive asdu200......";
+            CAsdu200 a200(a);
+            a200_list.append(a200);
+            qDebug()<<"Follow Tag:"<<a200.followTag;
+            if(a200.followTag==0)//传输完成
+            {
+                QByteArray file_name=a200_list.at(0).file_name;
+                QString qFile_name=QString::fromLocal8Bit(file_name);
+                QFile file("WaveFile\\192.168.0.171_CPU1\\"+qFile_name+".datagram");
+                file.open(QIODevice::WriteOnly | QIODevice::Text| QIODevice::Append);
+                QTextStream in(&file);
+                in.setCodec(QTextCodec::codecForName("UTF-8"));
+                for(CAsdu200 a:a200_list)
+                {
+                    for(int i=0;i<a.all_packet.size();i++)
+                    {
+                        in<<a.all_packet.mid(i,1).toHex();//目前只能通过先取子字节数组再转16进制这样来避免乱码了
+                        in<<" ";
+                        if(i!=0&&((i+1)%16==0)) in<<"\n";
+                    }
+                    in<<"\n";
+                }
+                file.close();
+                a200_list.clear();
+
+                /*召唤下个录波文件*/
+                for(int i=0;i<luBo_list.size();i++)
+                {
+                    if(file_name==luBo_list.at(i)&&(i+1<luBo_list.size()))
+                    {
+                        emit reciveAllLuBoPakcet(luBo_list.at(i+1));
+                    }
+                }
+            }
             break;
         }
         default:
@@ -141,15 +155,34 @@ void MainWindow::ExplainASDU(QByteArray &Data)
 
 void MainWindow::ProcessAsdu10(CAsdu &a)
 {
+    if(a.m_COT==0x01&&a.m_ASDUData.at(2)==0x04)//因为动作报告的asdu10格式有点特别，所以需特殊封装
+    {
+        qDebug()<<"Action Report------>>>";
+        QFile file("C:\\data\\Net103\\192.168.0.174_01_突发上传_动作报告.txt");
+        file.open(QIODevice::WriteOnly | QIODevice::Text);
+        QTextStream in(&file);
+        CAsdu10Link a10link(a);
+        in<<"Action Report--"<<"Entry："<<a10link.gin_h.ENTRY<<"--"
+         <<"has"<<a10link.reportArgNum<<" Action nums"
+        <<"--Gid："<<a10link.d1.gid<<"\n";
+        for(int i=0;i<a10link.reportArgNum;i++)
+        {
+            in<<"Description(8 bit ASCLL)："<<a10link.m_DataSet.at(i).gid<<"-----";
+            in<<"liang gang(8 bit ASCLL)："<<a10link.m_DataSet.at(i+1).gid<<"----";
+            in<<"value(<1><2><3><4><5><6><7>)："<<a10link.m_DataSet.at(i).gid<<"----";
+            in<<"\n";
+            i=i+3;
+        }
+        file.close();
+        return;
+    }
     CAsdu10 a10(a); //将原来a中的数据赋给a10
     a10.ExplainAsdu(); //正式开始解析这个asdu10包
     if(a10.m_COT==0x02){ //循环上报的数据
         QString addr=QString(a10.m_Addr);
-        int i_addr=a10.m_Addr;  // 这里uchar转int直接赋值就可以了
-        QFile file1("E:\\Net103\\192.168.0.171-01-循环上报.txt");
-        file1.open(QIODevice::WriteOnly | QIODevice::Text);
-        QTextStream in(&file1);
-        in.setCodec(QTextCodec::codecForName("GB2312"));
+        QFile file("192.168.0.174_01_循环上传.txt");
+        file.open(QIODevice::WriteOnly | QIODevice::Text);
+        QTextStream in(&file);
         QString group;
         for(int i=0;i!=a10.m_NGD.byte;i++)
         {
@@ -164,17 +197,19 @@ void MainWindow::ProcessAsdu10(CAsdu &a)
             default:
                 break;
             }
-            qDebug()<<data.gin.GROUP<<"--"<<data.gin.ENTRY<<"--"<<data.kod<<"--"<<data.gid[0]<<"\n";
-            in<<group<<",Entry："<<data.gin.ENTRY<<",Value："<<data.gid[0]<<"\n";
+            //遥测的数据类型是带品质描述的被测值，需要特殊处理
+            int entry=data.gin.ENTRY;
+            QString MEA=QString(data.gid);
+            in<<group<<",Entry："<<entry<<MEA<<"\n";
         }
-        file1.close();
+        file.close();
     }
     else if(a10.m_COT==0x01)//突发数据
     {
-        QFile file2("E:\\Net103\\192.168.0.171-01-突发上传.txt");
-        file2.open(QIODevice::WriteOnly | QIODevice::Text);
-        QTextStream in(&file2);
-        in.setCodec("UTF-8");
+        QFile file("192.168.0.174_01_突发上传.txt");
+        file.open(QIODevice::WriteOnly | QIODevice::Text);
+        QTextStream in(&file);
+        in.setCodec("GBK");
         for(int i=0;i!=a10.m_NGD.byte;i++)
         {
             DataSet data=a10.m_DataSets.at(i);
@@ -183,23 +218,25 @@ void MainWindow::ProcessAsdu10(CAsdu &a)
             {
                 in<<"组号：05H(告警)--条目号："<<data.gin.ENTRY
                  <<"实际值(1=开，2=合)："<<gid[0]<<"--时间:"<<
-                 gid[4]<<"h"<<gid[3]<<"min"<<gid[1]<<gid[2]<<"ms"<<"\n";
-                //上面的时间信息是二进制的，需要还原
-            }else if(data.gin.GROUP==0x08)//遥信变位时的带时标的遥信SOE上传
+                   gid[4]<<"h"<<gid[3]<<"min"<<gid[1]<<gid[2]<<"ms"<<"\n";
+                //上面的时间信息是二进制CP32Timea形式的，需还原
+            }else if(data.gin.GROUP==0x08)//遥信变位时的带时标的遥信SOE上传,这里i+1是因为08组报文后面附加了时标信息
             {
-                in<<"组号：08H(告警)--条目号："<<data.gin.ENTRY<<"实际值(1=开，2=合)"<<gid[0];
+                qDebug()<<data.gin.GROUP<<"--"<<data.gin.ENTRY<<"--"<<data.kod<<"--"<<data.gid.toHex();
+                in<<"Group：08H--Entry："<<data.gin.ENTRY<<"Value(1=open，2=close)"<<gid[0];
                 DataSet data=a10.m_DataSets.at(i+1);
-                in<<"----时标信息--条目号："<<data.gin.ENTRY<<"，实际值：(1=开，2=合)"<<data.gid[0]<<
-                    ",时间："<<gid[4]<<"h"<<gid[3]<<"min"<<gid[1]<<gid[2]<<"ms"<<"\n";
+                in<<"----Time Mesage(18H)--Entry："<<data.gin.ENTRY<<
+                    "--Time："<<gid[4]<<"h"<<gid[3]<<"min"<<gid[1]<<gid[2]<<"ms"<<"\n";
                 i=i+1;
+                qDebug()<<data.gin.GROUP<<"--"<<data.gin.ENTRY<<"--"<<data.kod<<"--"<<data.gid.toHex();
             }
         }
-        file2.close();
-    }else if(a10.m_COT==0x2a)//通用分类度命令的有效数据响应
+
+        file.close();
+    }else if(a10.m_COT==0x2a)//通用分类读取命令的有效数据响应
     {
-        DataSet pData=a10.m_DataSets.at(0);//将Asdu10查询到的运行定值区号(gid数据中)赋给pData
         // 读当前运行定值的区号,发Asdu10选择要读取的当前定值的区号
-        if(a10.m_INF==0xf4&&pData.gin.GROUP==0x00&&pData.gin.ENTRY==0x03)
+        if(a10.m_RII==0x06||a10.m_RII==0x08)
         {
             //发Asdu10选择要写入的定值的区号,这个区号是放在gid里的一个字节，通过指定这个区号可以实现读指定区号的定值
             CAsdu10 a10_send;
@@ -208,14 +245,13 @@ void MainWindow::ProcessAsdu10(CAsdu &a)
             a10_send.m_RII=0x14;
             a10_send.m_NGD.byte=0x01;
             //关于C++中结构体如何实例和赋值？
-            DataSet* data=NULL;
-            data=new DataSet;
+            DataSet* data=new DataSet;
             data->gin.GROUP=0x00;
             data->gin.ENTRY=0x02;
             data->gdd.gdd.DataType=0x03;
             data->gdd.gdd.DataSize=0x01;
             data->gdd.gdd.Number=0x01;
-            data->gid=pData.gid;//将pData中的区号给data，封装在asdu10写命令中
+            data->gid=a10.m_DataSets.at(0).gid;//将pData中的区号给data，封装在asdu10写命令中
             a10.m_DataSets.clear();
             a10.m_DataSets.append(*data);
             QByteArray sData;
@@ -223,174 +259,195 @@ void MainWindow::ProcessAsdu10(CAsdu &a)
             socket->write(sData);
             socket->flush();
 
-            //发Asdu21读03H组（定值）的全部条目
-            QByteArray sData21;
-            sData21.resize(11);
-            sData21[0]=0x15;
-            sData21[1]=0x81;
-            sData21[2]=0x2a;
-            sData21[3]=0x01;
-            sData21[4]=0xfe;
-            sData21[5]=0xf1;
-            sData21[6]=0x15;
-            sData21[7]=0x01;
-            if(isGetdingzhi){
-                sData21[8]=0x03;//组号--定值
-                sData21[9]=0x00;//条目号
+            //发Asdu21读定值或压板的全部条目
+            DataSet *pDataSet = new DataSet;
+            pDataSet->kod=0x01;//kod=1 召实际值
+            if(a10.m_RII==0x08){
+                pDataSet->gin.GROUP=0x03;//组号--定值
+                pDataSet->gin.ENTRY=0x00;//所有条目
+                SendAsdu21(0x01,0x11,0xf1,0x01,pDataSet);//RII=11标记读装置定值的所有条目asdu21
             }else
             {
-                sData21[8]=0x0e;//组号--压板
-                sData21[9]=0x00;//条目号
+                pDataSet->gin.GROUP=0x0e;//组号--压板
+                pDataSet->gin.GROUP=0x00;//所有条目
+                SendAsdu21(0x01,0x0a,0xf1,0x01,pDataSet);//RII=11标记读装置定值的所有条目asdu2
             }
-
-            sData21[10]=0x01;
-            socket->write(sData21);
-            socket->flush();
         }
-        else if(a10.m_INF==0xf1&&pData.gin.GROUP==0x03)//装置定值
+        else if(a10.m_RII==0x11)//装置定值
         {
-            QFile file("E:\\Net103\\192.168.0.171-01-装置定值.txt");
+            qDebug()<<"Device dingzhi";
+            QFile file("192.168.0.174_01_装置定值.txt");
             file.open(QIODevice::WriteOnly | QIODevice::Text);
             QTextStream in(&file);
-            in.setCodec("UTF-8");
             for(int i=0;i<a10.m_NGD.byte;i++)
             {
                 DataSet d=a10.m_DataSets.at(i);
-                in<<"条目:"<<d.gin.ENTRY<<"--值："<<d.gid<<"\n";
+                qDebug()<<"DeviceDingZhiTest-->";
+                qDebug()<<d.gin.GROUP<<"--"<<d.gin.ENTRY<<"--"<<d.gid;
+                in<<"DingZhi--Entry:"<<d.gin.ENTRY<<",Value:"<<d.gid.toUShort()<<"\n";
             }
             file.close();
         }
-        else if(a10.m_INF==0xf1&&pData.gin.GROUP==0x02)//内部定值
+        else if(a10.m_RII==0x07)//内部定值
         {
-            QFile file("E:\\Net103\\192.168.0.171-01-装置内部定值.txt");
+            QFile file("192.168.0.174_01_装置内部定值.txt");
             file.open(QIODevice::WriteOnly | QIODevice::Text);
-            QTextStream in(&file);
-            in.setCodec("UTF-8");;
+            QTextStream in(&file);;
             for(int i=0;i<a10.m_NGD.byte;i++)
             {
                 DataSet d=a10.m_DataSets.at(i);
-                in<<"条目:"<<d.gin.ENTRY<<"--值："<<d.gid<<"\n";
+                qDebug()<<"NeiBuDingZhiTest-->";
+                qDebug()<<d.gin.GROUP<<"--"<<d.gin.ENTRY<<"--"<<d.gid;
+                in<<"NeiBuDingZhi,"<<"entry:"<<d.gin.ENTRY<<",value:"<<d.gid.toUShort()<<"\n";
             }
             file.close();
         }
-        else if(a10.m_INF==0xf1&&pData.gin.GROUP==0x0e)//压板
+        else if(a10.m_RII==0x0a)//压板
         {
-            QFile file("E:\\Net103\\192.168.0.171-01-软压板.txt");
+            QFile file("192.168.0.174_01_软压板.txt");
             file.open(QIODevice::WriteOnly | QIODevice::Text);
             QTextStream in(&file);
-            in.setCodec("UTF-8");;
             for(int i=0;i<a10.m_NGD.byte;i++)
             {
                 DataSet d=a10.m_DataSets.at(i);
-                in<<"条目:"<<d.gin.ENTRY<<"--值："<<d.gid<<"\n";
+                qDebug()<<"YaBan Test---->";
+                qDebug()<<d.gin.GROUP<<"--"<<d.gin.ENTRY<<"--"<<d.gid;
+                in<<"YaBan,"<<"entry:"<<d.gin.ENTRY<<",value:"<<d.gid<<"\n";
             }
             file.close();
         }
-        else if(a10.m_INF==0xf1&&pData.gin.GROUP==0x1D)//模拟信道
+        else if(a10.m_RII<3)//模拟信道
         {
-            QSettings moni("Device_Info/WaveChannel/192.168.0.171_CPU1.ini",QSettings::IniFormat);
-            moni.setValue("/Device/ID",QString(a.m_Addr));
-            moni.setValue("/Device/NAME","10kV线路保护");
-            moni.setValue("/Device/ANALOG_CHANNEL",(int)a10.m_NGD.byte);
-            moni.setValue("/Device/CREATE_TIME","????");
-            for(int i=0;i<a10.m_NGD.byte;i++)
+            qDebug()<<"接收模拟信道的asdu10"<<a10.m_RII;
+            QString ip=socket->peerAddress().toString();//取ip地址
+            //QString file_path //如何在当前目录下创建ini文件呢？
+            QSettings *moni=new QSettings("H:/GraduationProject/Net103/Device_Info/WaveChannel/192.168.0.171_CPU1.ini",QSettings::IniFormat);
+            moni->setIniCodec("GBK");
+            moni->setValue("/Device/ID",QString(a10.m_Addr));
+            moni->setValue("/Device/NAME","10kV线路保护");
+            moni->beginGroup("ANALOG_CHANNEL");
+            for(int i=0;i<a10.m_DataSets.size();i++)
             {
-                QString key=QString("WAVE_CHANNEL/")+QString("通道ID");//具体的id值是数据？
-                QString value="???";
-                moni.setValue(key,value);
+                QString key=QString::number((int)a10.m_DataSets.at(i).gin.ENTRY);
+                if(a10.m_RII==0)//如果返回的是通道描述
+                {
+                    QString description=QString::fromLocal8Bit(a10.m_DataSets.at(i).gid);
+                    moni->setValue(key,description);
+                }
+                else if(a10.m_RII==1)//量纲
+                {
+                    QString formalValue=moni->value(key).toString();
+                    QString newValue=formalValue.append(QString::fromLocal8Bit(a10.m_DataSets.at(i).gid));
+                    moni->setValue(key,newValue);
+                }
+                else if(a10.m_RII==2)//实际值，计算系数
+                {
+                    QString formalValue=moni->value(key).toString();
+                    QString newValue=formalValue.append(QString("%1").arg(a10.m_DataSets.at(i).gid.toFloat()));
+                    moni->setValue(key,newValue);
+                }
             }
+            int num=moni->childKeys().size();
+            moni->endGroup();
+            moni->setValue("/Device/ANALOG_CHANNEL",num);
+            delete moni;
         }
-        else if(a10.m_INF==0xf1&&pData.gin.GROUP==0x20)//数字信道
+        else if(a10.m_RII==4)//数字信道,只召唤描述
         {
-            QSettings shuzi("Device_Info/WaveChannel/192.168.0.171_CPU1.ini",QSettings::IniFormat);
-            shuzi.setValue("/Device/ID",QString(a.m_Addr));
-            shuzi.setValue("/Device/NAME","10kV线路保护");
-            shuzi.setValue("/Device/DIGIT_CHANNEL",(int)a10.m_NGD.byte);
-            shuzi.setValue("/Device/CREATE_TIME","????");
+            qDebug()<<"接收数字信道的asdu10"<<a10.m_RII;
+            QSettings *shuzi=new QSettings("H:/GraduationProject/Net103/Device_Info/WaveChannel/192.168.0.171_CPU1.ini",QSettings::IniFormat);
+            shuzi->setIniCodec("GBK");
+            shuzi->setValue("/Device/ID",QString(a.m_Addr));
+            shuzi->setValue("/Device/NAME","10kV线路保护");
+            shuzi->beginGroup("DIGIT_CHANNEL");
+            for(int i=0;i<a10.m_DataSets.size();i++)
+            {
+                QString key=QString::number((int)a10.m_DataSets.at(i).gin.ENTRY);
+                if(a10.m_RII==4)
+                {
+                    QString description=QString::fromLocal8Bit(a10.m_DataSets.at(i).gid);
+                    shuzi->setValue(key,description);
+                }
+            }
+            int num=shuzi->childKeys().size();
+            shuzi->endGroup();
+            shuzi->setValue("/Device/DIGIT_CHANNEL",num);
+            QDateTime current_date_time =QDateTime::currentDateTime();
+            QString current_date =current_date_time.toString("yyyy.MM.dd hh:mm:ss.zzz ddd");
+            shuzi->setValue("/Device/CREATE_TIME",current_date);
+            delete shuzi;
+        }
+        else if(a10.m_RII==0x0b)//保护测量
+        {
+            QFile file("192.168.0.174_01_保护测量.txt");
+            file.open(QIODevice::WriteOnly | QIODevice::Text);
+            QTextStream in(&file);;
             for(int i=0;i<a10.m_NGD.byte;i++)
             {
-                QString key=QString("WAVE_CHANNEL/")+QString("通道ID");
-                QString value="???";
-                shuzi.setValue(key,value);
+                DataSet d=a10.m_DataSets.at(i);
+                qDebug()<<d.gin.GROUP<<"--"<<d.gin.ENTRY<<"--"<<d.gid;
+                in<<"BaoHu,"<<"entry:"<<d.gin.ENTRY<<",value:"<<d.gid.toUShort()<<"\n";
             }
+            file.close();
         }
     }
 }
 
-void MainWindow::SendAsdu07()
+void MainWindow::GetYaBan()
 {
-    CAsdu07 a07;
-    a07.m_Addr=0xff;//这里是广播发送，我感觉应该是到数据库中取才对
-    QByteArray sData;
-    a07.BuildArray(sData);
-    socket->write(sData);
-    socket->flush();
-}
-
-void MainWindow::SendAsdu21ForYaBan()
-{
-    isGetdingzhi=false;
     //先发ASDU21读取运行值区号
-    QByteArray data;
-    data.resize(11);
-    data.resize(11);
-    data[0]=0x15;
-    data[1]=0x81;
-    data[2]=0x2a;
-    data[3]=0x01;
-    data[4]=0xfe;
-    data[5]=0xf4;
-    data[6]=0x13;
-    data[7]=0x01;
-    data[8]=0x00;//组号
-    data[9]=0x03;//条目号
-    data[10]=0x01;//kod=1表示要读的是条目的实际值，而不是条目的描述
-    socket->write(data);
-    socket->flush();
-}
-
-void MainWindow::SendAsdu21ForNeiBuDingZhi()
-{
-    QByteArray data;
-    data.resize(11);
-    data[0]=0x15;
-    data[1]=0x81;
-    data[2]=0x2a;
-    data[3]=0x01;
-    data[4]=0xfe;
-    data[5]=0xf1;
-    data[6]=0x00;
-    data[7]=0x01;
-    data[8]=0x02;//组号
-    data[9]=0x00;//条目号
-    data[10]=0x01;
-    socket->write(data);
-    socket->flush();
+    DataSet *pDataSet=new DataSet;
+    pDataSet->gin.GROUP=0x00;
+    pDataSet->gin.ENTRY=0x03;
+    pDataSet->kod=0x01;//kod=1表示要读的是条目的实际值，而不是条目的描述
+    SendAsdu21(0x01,0xf4,0x06,0x01,pDataSet);
 }
 
 void MainWindow::GetDeviceDingZhi() //读当前定值
 {
-    isGetdingzhi=true;
     //先发ASDU21读取运行值区号
-    QByteArray data;
-    data.resize(11);
-    data.resize(11);
-    data[0]=0x15;
-    data[1]=0x81;
-    data[2]=0x2a;
-    data[3]=0x01;
-    data[4]=0xfe;
-    data[5]=0xf4;
-    data[6]=0x13;
-    data[7]=0x01;
-    data[8]=0x00;//组号
-    data[9]=0x03;//条目号
-    data[10]=0x01;//kod=1表示要读的是条目的实际值，而不是条目的描述
-    socket->write(data);
+    DataSet *pDataSet=new DataSet;//这里为什么既能用指针也能用(引用？值？)
+    pDataSet->gin.GROUP=0x00;
+    pDataSet->gin.GROUP=0x03;
+    pDataSet->kod=0x01;
+    SendAsdu21(0x01,0xf4,0x08,0x01,pDataSet);
+}
+
+void MainWindow::GetNeiBuDingZhi(const BYTE &m_addr,const BYTE &entry,const BYTE &kod)
+{
+    DataSet *pDataSet=new DataSet;
+    pDataSet->gin.GROUP=0x02;
+    pDataSet->gin.ENTRY=entry;
+    pDataSet->kod=kod;
+    SendAsdu21(m_addr,0xf1,0x07,0x01,pDataSet);
+}
+
+void MainWindow::GetLuBo(const QByteArray & file_name)
+{
+    //按照录波文件名来召唤录波文件,如果录波文件已存在则不召唤这个录波文件，直接召唤下一个
+    QString qFile_name=QString::fromLocal8Bit(file_name);
+    QFile file("WaveFile\\192.168.0.171_CPU1\\"+qFile_name+".datagram");
+    if(file.exists())
+    {
+        for(int i=0;i<luBo_list.size();i++)
+        {
+            if(file_name==luBo_list.at(i)&&(i+1<luBo_list.size()))
+            {
+                emit reciveAllLuBoPakcet(luBo_list.at(i+1));
+            }
+        }
+        return;
+    }
+
+    CAsdu200 a200;
+    a200.file_name=file_name;
+    QByteArray sData;
+    a200.BuildArray(sData);
+    socket->write(sData);
     socket->flush();
 }
 
-void *GetLuBo(void *lp)
+void MainWindow::BeforeGetLuBo()
 {
     //生成故障录波文件目录
     QDir dir;
@@ -410,67 +467,78 @@ void *GetLuBo(void *lp)
 
     //向数据库查询现有装置的ip和cpu号，写文件目录和文件，我这里先固定写一个装置的情形
     dir.mkdir("WaveFile/192.168.0.171_CPU1");
-    while(true)
+    GetChannel(0x01);
+    CAsdu201 a201;
+    QByteArray sData;
+    sData.resize(0);
+    a201.BuildArray(sData);
+    socket->write(sData);
+    socket->flush();
+}
+
+void MainWindow::GetBaoHu(const BYTE &m_addr,const BYTE & entry, const BYTE & kod)
+{
+    //先发ASDU21读取运行值区号
+    DataSet *pDataSet=new DataSet;//这里为什么既能用指针也能用(引用？值？)
+    pDataSet->gin.GROUP=0x06;
+    pDataSet->gin.ENTRY=entry;
+    pDataSet->kod=kod;//读实际值
+    SendAsdu21(m_addr,0x0b,0xf1,0x01,pDataSet);
+}
+
+void MainWindow::GetChannel(const BYTE &m_addr)
+{
+    /*设备通道信息分为数字通道，和模拟通道。模拟通道除了需要召唤数据外，还需要召唤通道描述，量纲，计算系数(实际值)。
+          数字通道则只需要召唤描述和数据。模拟通道的组号是0x1D，数字通道的组号是0x20。要分开召*/
+    for(int i=0;i<5;i++)
     {
-        //设备信息是要到数据库定时插再写入ini文件中的
-        /*设备通道信息分为数字通道，和模拟通道。模拟通道除了需要召唤数据外，还需要召唤通道描述，量纲，计算系数。
-          数字通道则只需要召唤描述和数据。模拟通道的组号是0x1D，数字通道的组号是0x20*/
-        //模拟通道
-        CAsdu21 a21ForMoni;
-        a21ForMoni.m_NOG=4;
-        DataSet *pDataSet1=new DataSet;
-        pDataSet1->gin.GROUP=0x1d;
-        pDataSet1->gin.ENTRY=0x00;
-        pDataSet1->kod=10;//通道描述
-        a21ForMoni.m_DataSets.append(*pDataSet1);
-
-        DataSet *pDataSet2=new DataSet;
-        pDataSet2->gin.GROUP=0x1d;
-        pDataSet2->gin.ENTRY=0x00;
-        pDataSet2->kod=9;//量纲（单位？）
-        a21ForMoni.m_DataSets.append(*pDataSet2);
-
-        DataSet *pDataSet3=new DataSet;
-        pDataSet3->gin.GROUP=0x1d;
-        pDataSet3->gin.ENTRY=0x00;
-        pDataSet3->kod=6;//因子是计算系数？
-        a21ForMoni.m_DataSets.append(*pDataSet3);
-
-        DataSet *pDataSet4=new DataSet;
-        pDataSet4->gin.GROUP=0x1d;
-        pDataSet4->gin.ENTRY=0x00;
-        pDataSet4->kod=1;//实际值(数据)？
-        a21ForMoni.m_DataSets.append(*pDataSet4);
-        QByteArray sDataForMoni;
-        a21ForMoni.BuildArray(sDataForMoni);
-        socket->write(sDataForMoni);
-        socket->flush();
-
-        //数字通道
-        CAsdu21 a21ForShuZi;
-        a21ForShuZi.m_NOG=2;
-        DataSet *pDataSet5=new DataSet;
-        pDataSet5->gin.GROUP=0x20;
-        pDataSet5->gin.ENTRY=0x00;
-        pDataSet5->kod=10;//通道描述
-        a21ForShuZi.m_DataSets.append(*pDataSet5);
-
-        DataSet *pDataSet6=new DataSet;
-        pDataSet6->gin.GROUP=0x20;
-        pDataSet6->gin.ENTRY=0x00;
-        pDataSet6->kod=1;
-        a21ForShuZi.m_DataSets.append(*pDataSet6);
-        QByteArray sDataForShuZi;
-        a21ForShuZi.BuildArray(sDataForShuZi);
-        socket->write(sDataForShuZi);
-        socket->flush();
-
-        //故障录波文件
-        CAsdu201 a201;
-        QByteArray sData;
-        a201.BuildArray(sData);
-        socket->write(sData);
-        socket->flush();
-        sleep(60);
+        DataSet *pDataSet=new DataSet;
+        //召唤模拟通道所有条目的描述，量纲，计算系数(实际值)
+        if(i<3)
+        {
+            pDataSet->gin.GROUP=0x1d;
+            pDataSet->gin.ENTRY=0x00;
+            if(i==0) pDataSet->kod=10;//通道描述
+            if(i==1) pDataSet->kod=9;//量纲（单位）
+            if(i==2) pDataSet->kod=1;//实际值
+            SendAsdu21(m_addr,0xf1,i,0x01,pDataSet);
+        }else//召唤数字信道的描述
+        {
+            pDataSet->gin.GROUP=0x20;
+            pDataSet->gin.ENTRY=0x00;
+            if(i==4) pDataSet->kod=10;
+            SendAsdu21(m_addr,0xf1,i,0x01,pDataSet);
+        }
+        delete pDataSet;
     }
+}
+
+void MainWindow::SendAsdu07()
+{
+    CAsdu07 a07;
+    a07.m_Addr=0xff;//这里是广播发送，我感觉应该是到数据库中取才对
+    QByteArray sData;
+    a07.BuildArray(sData);
+    socket->write(sData);
+    socket->flush();
+}
+
+void MainWindow::SendAsdu21(const BYTE &m_addr, const BYTE &m_INF, const BYTE &m_RII, const BYTE &m_NGD, DataSet *pDataSet)
+{
+    CAsdu21 a21;
+    a21.m_Addr=m_addr;
+    a21.m_RII=m_RII;
+    a21.m_INF=m_INF;
+    a21.m_NOG=m_NGD;
+    a21.m_DataSets.clear();
+    a21.m_DataSets.append(*pDataSet);
+    QByteArray sData;
+    a21.BuildArray(sData);
+    socket->write(sData);
+    socket->flush();
+}
+
+void MainWindow::onTimerOut()
+{
+
 }
