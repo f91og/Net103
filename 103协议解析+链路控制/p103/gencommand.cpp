@@ -1,4 +1,4 @@
-#include "gencommand.h"
+﻿#include "gencommand.h"
 #include "deviceprotocol.h"
 #include <QtDebug>
 #include "protocol_define.h"
@@ -662,12 +662,12 @@ void ControlCommand::RecvData(const QByteArray &data, uchar cot)
     else{
         qDebug()<<"cot:"<<cot<<" data:"<<data.toHex();
         //信号复归的收和发的报文不是完全一致的
-        if(cot==0x28&&data[4]==0x00&&data[5]==0x06){
+        if(cot==0x28){
             if(m_handler){
                 m_handler->WriteSuccessHandle();;
             }
         }
-        else if(data!=m_sendBuf){
+        else if(cot==0x29){
             if(m_handler){
                 m_handler->WriteErrorHandle("遥控反校失败");
             }

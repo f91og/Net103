@@ -21,8 +21,8 @@ TcpSocket::TcpSocket(GateWay *parent):
     link_t1 = setting.value("link_t1",60).toUInt();
     link_t2 = setting.value("link_t2",30).toUInt();
     setting.endGroup();
-    m_udpBroadcastTime=12;
-    m_udpHandShakeTime=10;
+    m_udpBroadcastTime=10;
+    m_udpHandShakeTime=15;
     m_waitTime=link_t1;
     m_lastConnectTime=link_t2;
 }
@@ -122,8 +122,8 @@ void TcpSocket::CheckReceive()
             temp[1]=0x81;
             temp[2]=0x09;
             temp[3]=m_recvData[3];
-            int index=m_recvData.indexOf(temp,4);
-            int lastIndex=m_recvData.lastIndexOf(temp);
+            int index=m_recvData.indexOf(temp,4); // 判断当前接收数据中是否包含了两个ASDU200
+            int lastIndex=m_recvData.lastIndexOf(temp); // 当前接收数据中的最后一个ASDU200的位置
             qDebug()<<"index--><"<<index;
             isValid=true;
             if(lastIndex==0){
@@ -140,9 +140,35 @@ void TcpSocket::CheckReceive()
                 m_recvData=m_recvData.mid(1);
                 return;
             }
-            if((uchar)m_recvData[2]==0x2b){    // 2b表示读命令的无效数据响应，固定返回10个字节
+//            uchar packet_error[16]={0x0a,0x81,0x09,0x01,0xff,0x00,0xff,0x02,0x07,0x01,0x01,0x0c,0x02,0x01,0x00,0x00};
+//            QByteArray array;
+//            memcpy(array.data(), &packet_error, 16);
+            if(m_recvData[7]==0x02&&m_recvData[8]==0x07){
+                if(m_recvData.size()<=16) return;
+                else if(m_recvData[16]!=0x07){
+                    m_recvData=m_recvData.mid(16);
+                    return;
+                }
+            }
+            if(m_recvData[2]==0x2b){    // 2b表示读命令的无效数据响应，固定返回10个字节
                 packet=m_recvData.left(10);
                 isValid=true;
+            }else if(m_recvData[8]==0x04){  // 动作元件
+                if(m_recvData.size()<24) return;
+                //22
+                ushort end_index=0;
+                ushort number=m_recvData[12];
+                number=number*3;
+                qDebug()<<"number"<<number;
+                QByteArray arg_data=m_recvData.mid(24);
+                while(number>0&&arg_data.size()>5){
+                    uchar datasize=arg_data[2];
+                    arg_data=arg_data.mid(datasize+4);
+                    end_index=end_index+datasize+4;
+                    number--;
+                }
+                if(number==0) isValid=true;
+                packet=m_recvData.left(24+end_index);
             }else{
                 packet=m_recvData.left(8);
                 QByteArray data_all=m_recvData.mid(8);
@@ -273,17 +299,14 @@ void TcpSocket::OnTimer()
 
 void TcpSocket::TimerOut()
 {
-    qDebug()<<"定时器标记";
     if(m_appState==AppStarted){
-        qDebug()<<"m_udpHandShakeTime"<<m_udpHandShakeTime;
         if(m_udpHandShakeTime>0){
             m_udpHandShakeTime--;
             if(m_udpHandShakeTime==0){
                 m_gateWay->SendUdp(m_remoteIP,m_index,true);
-                m_udpHandShakeTime=10;
+                m_udpHandShakeTime=15;
             }
         }
-        qDebug()<<"m_waitTime"<<m_waitTime;
         if(m_waitTime>0){
             m_waitTime--;
             return;
@@ -295,23 +318,21 @@ void TcpSocket::TimerOut()
                              QString("连接接收超时"));
         Close();
     }else{
-        qDebug()<<"m_udpBroadcastTime"<<m_udpBroadcastTime;
         m_udpBroadcastTime--;
         if(m_udpBroadcastTime==0){
             m_gateWay->SendUdp(m_remoteIP,m_index,false);
-            m_udpBroadcastTime=12;
+            m_udpBroadcastTime=10;
         }
     }
     if(m_appState==AppRestarting){
         m_lastConnectTime--;
-        qDebug()<<"m_lastConnectTime"<<m_lastConnectTime;
         if(m_lastConnectTime==0){
             QByteArray send(20,0);
             uchar array[14]={0x0a,0x81,0x01,cpu_no,0xfe,
-                             0xf4,0x01,0x01,0x05,0x25,0x01,0x12,0x06,0x01};
+                             0xf4,0x01,0x01,0x05,0xc8,0x01,0x12,0x06,0x01};
             memcpy(send.data(), &array, 14); //利用memcpy将数组赋给QByteArray，可以指定复制的起始位和复制多少个
             send[14]=2;
-            if(m_index==1) send[9]=0x26;
+            if(m_index==1) send[9]=0xc9;
             QDateTime now = QDateTime::currentDateTime();
             struct TIME_S
             {

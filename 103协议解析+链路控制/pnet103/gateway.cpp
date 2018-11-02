@@ -85,10 +85,10 @@ void GateWay::Init(ushort sta,ushort dev,const QStringList& ips)
                 );
         m_lstSocket.append(tcp);
     }
-    foreach(TcpSocket* tcp,m_lstSocket)
-    {
-        SendUdp(tcp->GetRemoteIP(),tcp->GetIndex(),false);
-    }
+//    foreach(TcpSocket* tcp,m_lstSocket)
+//    {
+//        SendUdp(tcp->GetRemoteIP(),tcp->GetIndex(),false);
+//    }
 }
 
 void GateWay::PacketReceived(const NetPacket &np, int index)
@@ -100,7 +100,7 @@ void GateWay::PacketReceived(const NetPacket &np, int index)
     np.GetDestAddr(sta,dev);
     QByteArray data = np.GetAppData();
     QByteArray send=np.GetAppData();
-    if((uchar)send[8]==0x05 && ((uchar)send[9]==0x25 || (uchar)send[9]==0x26)){
+    if((uchar)send[8]==0x05 && ((uchar)send[9]==0xc8 || (uchar)send[9]==0xc9)){
         PNet103App::GetInstance()
                 ->EmitRecvASDU(sta,dev,data);
         return;
@@ -162,6 +162,15 @@ void GateWay::SendUdp(QString ip, int index, bool isConnected)
         heart_udp[0]=0x88;
         memcpy(heart_udp.data()+2, &Time, 7);
         m_pUdpSocket->writeDatagram(heart_udp.data(),9,ha,port);
+
+        //对时，建立连接后握手报文和心跳报文都要发
+        QByteArray con_packet(41,0);
+        con_packet[0]=0xFF;
+        con_packet[1]=1;
+        memcpy(con_packet.data()+2, &Time, 7);
+        QByteArray sca_type="NPS-SCS:NDJ300-V1.0";  // 将String赋给字节数组
+        memcpy(con_packet.data()+9, sca_type.data(), sca_type.length());
+        m_pUdpSocket->writeDatagram(con_packet.data(),41,ha,port);
     }else{
         QByteArray con_packet(41,0);
         con_packet[0]=0xFF;
